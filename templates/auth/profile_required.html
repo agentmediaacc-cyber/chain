@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Profile Required | Chain Premium{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p>ONBOARDING</p>
+    <h2>One last step...</h2>
+</section>
+
+<div class="feature-container" style="max-width: 1000px; margin: auto; padding: 0 24px; text-align: center;">
+    <div class="feed-card" style="padding: 60px; border-radius: 40px; background: radial-gradient(circle at top right, rgba(124,58,237,0.1), transparent);">
+        <div style="font-size: 80px; margin-bottom: 30px;">👤</div>
+        <h3 style="font-size: 32px; margin-bottom: 15px;">Complete Your Profile</h3>
+        <p style="color: #bfc0d5; font-size: 18px; line-height: 1.6; max-width: 500px; margin: 0 auto 40px;">
+            Your account is ready, but you need a public profile to join live rooms, send gifts, and connect with other members.
+        </p>
+        
+        <div style="display: flex; justify-content: center; gap: 15px;">
+            <a href="/profile/create" class="primary" style="padding: 15px 40px;">Create Profile Now</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

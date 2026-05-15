@@ -1,0 +1,232 @@
+.chain-auth-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 16px 84px;
+}
+
+.chain-auth-card {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 32px;
+  border: 1px solid var(--chain-border);
+  background:
+    radial-gradient(circle at top right, rgba(122,99,222,.12), transparent 28%),
+    radial-gradient(circle at top left, rgba(235,107,122,.12), transparent 26%),
+    linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,248,247,.92));
+  box-shadow: var(--chain-shadow-lg);
+  backdrop-filter: blur(20px);
+}
+
+.chain-auth-head h1 {
+  margin: 0 0 10px;
+  font-size: clamp(34px, 6vw, 58px);
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+
+.chain-auth-head p,
+.chain-auth-oauth span,
+.chain-auth-grid small,
+.chain-auth-link {
+  color: var(--chain-muted);
+}
+
+.chain-auth-eyebrow,
+.chain-auth-step-label {
+  display: inline-block;
+  margin: 0 0 10px;
+  color: var(--chain-primary);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.chain-auth-alert {
+  padding: 14px 16px;
+  border-radius: 18px;
+}
+
+.chain-auth-alert--error {
+  background: rgba(201,92,86,.12);
+  border: 1px solid rgba(201,92,86,.18);
+  color: #8d433f;
+}
+
+.chain-auth-progress div {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(122,99,222,.08);
+  margin-top: 8px;
+}
+
+.chain-auth-progress span {
+  display: block;
+}
+
+#chain-register-progress-bar {
+  width: 25%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--chain-primary), #f5a36b, var(--chain-secondary));
+}
+
+.chain-register-step {
+  display: none;
+  padding: 20px;
+  border-radius: 26px;
+  background: rgba(255,255,255,.7);
+  border: 1px solid var(--chain-border);
+  box-shadow: var(--chain-shadow-sm);
+}
+
+.chain-register-step.is-active {
+  display: block;
+}
+
+.chain-register-step h2 {
+  margin: 0 0 10px;
+  font-size: clamp(26px, 4vw, 38px);
+  line-height: 1.05;
+}
+
+.chain-auth-oauth-grid,
+.chain-auth-grid,
+.chain-chip-grid,
+.chain-toggle-list {
+  display: grid;
+  gap: 14px;
+}
+
+.chain-auth-oauth-grid {
+  grid-template-columns: repeat(3, minmax(0,1fr));
+}
+
+.chain-auth-oauth {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255,255,255,.78);
+  border: 1px solid var(--chain-border);
+  box-shadow: var(--chain-shadow-sm);
+}
+
+.chain-auth-grid {
+  grid-template-columns: repeat(2, minmax(0,1fr));
+}
+
+.chain-auth-grid .full {
+  grid-column: 1 / -1;
+}
+
+.chain-auth-grid label {
+  display: grid;
+  gap: 8px;
+}
+
+.chain-auth-grid input,
+.chain-auth-grid select {
+  color: var(--chain-text);
+}
+
+.password-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.toggle-password {
+  min-width: 70px;
+  border-radius: 16px;
+  border: 1px solid var(--chain-border);
+  background: rgba(255,255,255,.78);
+  color: var(--chain-text);
+}
+
+.availability.is-available,
+.password-strength.is-strong {
+  color: var(--chain-success);
+}
+
+.availability.is-unavailable,
+.password-strength.is-weak {
+  color: var(--chain-error);
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestions button,
+.chain-chip {
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--chain-border);
+  background: rgba(255,255,255,.8);
+  color: var(--chain-text);
+  font-weight: 800;
+}
+
+.chain-chip-grid {
+  grid-template-columns: repeat(3, minmax(0,1fr));
+}
+
+.chain-chip.is-selected,
+.suggestions button {
+  background: linear-gradient(135deg, rgba(235,107,122,.16), rgba(122,99,222,.14));
+  border-color: rgba(235,107,122,.24);
+}
+
+.chain-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid var(--chain-border);
+}
+
+.chain-auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chain-auth-actions__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#register_submit {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .chain-auth-card,
+  .chain-register-step {
+    padding: 18px;
+  }
+
+  .chain-auth-oauth-grid,
+  .chain-auth-grid,
+  .chain-chip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chain-auth-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chain-auth-actions__right {
+    justify-content: space-between;
+  }
+}

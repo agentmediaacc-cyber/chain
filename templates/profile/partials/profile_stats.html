@@ -1,0 +1,34 @@
+<section class="profile-stats-grid">
+    <article class="stat-card">
+        <b>{{ stats.views or profile.profile_views or 0 }}</b>
+        <span>Profile Views</span>
+    </article>
+    <article class="stat-card">
+        <b>{{ followers_count or stats.followers or 0 }}</b>
+        <span>Followers</span>
+    </article>
+    <article class="stat-card">
+        <b>{{ following_count or stats.following or 0 }}</b>
+        <span>Following</span>
+    </article>
+    <article class="stat-card">
+        <b>{{ stats.likes or profile.total_likes or 0 }}</b>
+        <span>Likes</span>
+    </article>
+    <article class="stat-card">
+        <b>{{ stats.posts or 0 }}</b>
+        <span>Posts</span>
+    </article>
+    <article class="stat-card">
+        <b>{{ stats.stories or 0 }}</b>
+        <span>Stories</span>
+    </article>
+    <article class="stat-card">
+        <b>{{ stats.rooms or 0 }}</b>
+        <span>Live Rooms</span>
+    </article>
+    <article class="stat-card">
+        <b>{{ wallet.coin_balance or profile.wallet_balance or 0 }}</b>
+        <span>Wallet</span>
+    </article>
+</section>

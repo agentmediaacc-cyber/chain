@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}CHAIN Developer Control Center{% endblock %}
+{% block body_class %}chain-wallpaper-admin{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chain_portal.css">{% endblock %}
+
+{% block content %}
+<section class="chain-portal-shell">
+    <div class="chain-portal-hero">
+        <p class="chain-portal-kicker">Developer Access</p>
+        <h1>CHAIN Developer Control Center</h1>
+        <p class="chain-portal-copy">Master controls for platform growth, content operations, monetization switches and system visibility.</p>
+        <div class="chain-badge-row">
+            <span class="chain-pill">Master admin: {{ admin_user.username }}</span>
+            <span class="chain-pill">Role: {{ admin_user.role }}</span>
+            <a href="/admin/settings" class="secondary">Platform settings</a>
+        </div>
+    </div>
+
+    <div class="chain-portal-grid chain-portal-grid--4 chain-admin-metrics" style="margin:22px 0;">
+        {% for title, value in metrics.items() %}
+        <article class="chain-data-card chain-stat-card">
+            <strong>{{ value }}</strong>
+            <span class="chain-help">{{ title.replace('_', ' ')|title }}</span>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="chain-portal-grid chain-portal-grid--3" style="margin-bottom:22px;">
+        {% for card in feature_cards %}
+        <a href="{{ card.href }}" class="chain-data-card chain-clickable-card">
+            <strong style="display:block; font-size:22px; margin-bottom:8px;">{{ card.title }}</strong>
+            <div style="font-size:30px; font-weight:900; margin-bottom:10px;">{{ card.value }}</div>
+            <p class="chain-help" style="margin:0;">{{ card.copy }}</p>
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="chain-portal-grid chain-portal-grid--2">
+        <section class="chain-data-card">
+            <h2>Homepage controls preview</h2>
+            <pre class="chain-help" style="margin:0; white-space:pre-wrap;">{{ site_settings_json }}</pre>
+        </section>
+        <section class="chain-data-card">
+            <h2>Audit shortcut</h2>
+            <p class="chain-help">Jump into the full operational audit log for approvals, setting changes and financial actions.</p>
+            <a href="/admin/audit" class="secondary">Open audit log</a>
+        </section>
+    </div>
+</section>
+{% endblock %}

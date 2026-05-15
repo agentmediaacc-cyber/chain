@@ -1,0 +1,20 @@
+window.CHAIN_LOCATIONS = [
+  { country: "Namibia", regions: ["Erongo", "Hardap", "Kavango East", "Kavango West", "Khomas", "Kunene", "Ohangwena", "Omaheke", "Omusati", "Oshana", "Oshikoto", "Otjozondjupa", "Zambezi", "ǁKaras"] },
+  { country: "South Africa", regions: ["Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo", "Mpumalanga", "North West", "Northern Cape", "Western Cape"] },
+  { country: "Angola", regions: ["Bengo", "Benguela", "Bié", "Cabinda", "Cuando Cubango", "Cuanza Norte", "Cuanza Sul", "Cunene", "Huambo", "Huíla", "Luanda", "Lunda Norte", "Lunda Sul", "Malanje", "Moxico", "Namibe", "Uíge", "Zaire"] },
+  { country: "Botswana", regions: ["Central", "Gaborone", "Kgalagadi", "Kgatleng", "Kweneng", "North-East", "North-West", "South-East", "Southern"] },
+  { country: "Zambia", regions: ["Central", "Copperbelt", "Eastern", "Luapula", "Lusaka", "Muchinga", "Northern", "North-Western", "Southern", "Western"] },
+  { country: "Zimbabwe", regions: ["Bulawayo", "Harare", "Manicaland", "Mashonaland Central", "Mashonaland East", "Mashonaland West", "Masvingo", "Matabeleland North", "Matabeleland South", "Midlands"] },
+  { country: "Nigeria", regions: ["Abia", "Abuja FCT", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Kaduna", "Kano", "Lagos", "Ogun", "Oyo", "Plateau", "Rivers"] },
+  { country: "Ghana", regions: ["Ahafo", "Ashanti", "Bono", "Central", "Eastern", "Greater Accra", "Northern", "Savannah", "Upper East", "Upper West", "Volta", "Western"] },
+  { country: "Kenya", regions: ["Central", "Coast", "Eastern", "Nairobi", "North Eastern", "Nyanza", "Rift Valley", "Western"] },
+  { country: "Tanzania", regions: ["Arusha", "Dar es Salaam", "Dodoma", "Geita", "Kagera", "Kilimanjaro", "Mara", "Mbeya", "Morogoro", "Mwanza", "Pwani", "Songwe", "Tabora", "Tanga", "Zanzibar"] },
+  { country: "Uganda", regions: ["Central", "Eastern", "Northern", "Western"] },
+  { country: "Rwanda", regions: ["City of Kigali", "Eastern", "Northern", "Southern", "Western"] },
+  { country: "USA", regions: ["California", "Florida", "Georgia", "Illinois", "New York", "Texas", "Virginia", "Washington"] },
+  { country: "UK", regions: ["England", "Northern Ireland", "Scotland", "Wales"] },
+  { country: "Germany", regions: ["Bavaria", "Berlin", "Brandenburg", "Hamburg", "Hesse", "Lower Saxony", "North Rhine-Westphalia", "Saxony"] },
+  { country: "Brazil", regions: ["Bahia", "Brasília DF", "Minas Gerais", "Paraná", "Rio de Janeiro", "Rio Grande do Sul", "São Paulo"] },
+  { country: "India", regions: ["Delhi", "Gujarat", "Karnataka", "Kerala", "Maharashtra", "Tamil Nadu", "Telangana", "West Bengal"] },
+  { country: "China", regions: ["Beijing", "Chongqing", "Guangdong", "Jiangsu", "Shanghai", "Sichuan", "Zhejiang"] }
+];

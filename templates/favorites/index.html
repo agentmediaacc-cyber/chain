@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Favorites | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/profile_premium.css">
+{% endblock %}
+
+{% block content %}
+<section class="profile-form-shell">
+    <div class="glass-panel">
+        <div class="panel-head"><div><p>FAVORITES</p><h2>Saved profiles and content</h2></div></div>
+        {% if items %}
+        <div class="live-room-list">
+            {% for item in items %}
+            <a class="live-room-card" href="{{ item.href }}">
+                <div>
+                    <b>{{ item.title }}</b>
+                    <span>{{ item.subtitle }}</span>
+                </div>
+                <small>{{ item.created_at or "" }}</small>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        {% set title = "No favorites yet" %}
+        {% set message = "Your real `chain_favorites` records will appear here as soon as you start saving profiles, posts, or live rooms." %}
+        {% set action_href = "/discover" %}
+        {% set action_label = "Explore Chain" %}
+        {% set icon = "fa-heart" %}
+        {% include "profile/partials/profile_empty_state.html" %}
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

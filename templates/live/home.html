@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+  <title>Live Now | Chain</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/live.css') }}">
+</head>
+<body>
+<main class="live-home">
+  <section class="studio-hero">
+    <p>CHAIN LIVE</p>
+    <h1>Live rooms happening now.</h1>
+    <a href="/live/studio">🔴 Start Live</a>
+  </section>
+
+  {% if rooms %}
+    <section class="room-grid">
+      {% for r in rooms %}
+        <a class="room-card" href="/live/room/{{ r.id }}">
+          <div class="room-logo">⛓️</div>
+          <h2>{{ r.title }}</h2>
+          <p>{{ r.welcome_message }}</p>
+          <span>👀 {{ r.viewer_count or 0 }} viewers</span>
+          <span>🎁 {{ r.total_gift_coins or 0 }} coins</span>
+          <b>{{ r.access_type }}</b>
+        </a>
+      {% endfor %}
+    </section>
+  {% else %}
+    <section class="empty-live">
+      <h2>No live rooms now</h2>
+      <p>Start the first real Chain live room.</p>
+      <a href="/live/studio">Go Live</a>
+    </section>
+  {% endif %}
+</main>
+</body>
+</html>

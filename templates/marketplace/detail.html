@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Marketplace Item | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-marketplace{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chain_portal.css">{% endblock %}
+
+{% block content %}
+<section class="chain-portal-shell chain-portal-shell--narrow">
+    <article class="chain-data-card">
+        <p class="chain-portal-kicker">{{ item.item_type|replace('_', ' ')|title }}</p>
+        <h1>{{ item.title }}</h1>
+        <p class="chain-portal-copy">{{ item.description or 'This creator drop is ready for premium access.' }}</p>
+
+        <div class="chain-marketplace-thumb {% if access.show_blur %}chain-marketplace-thumb--blur{% endif %}"></div>
+        <p class="chain-help">{% if access.show_blur %}Premium preview stays softened until purchase or premium access unlocks it.{% else %}Preview is available now.{% endif %}</p>
+
+        <div class="chain-badge-row" style="margin-top:16px;">
+            <span class="chain-price-pill">{{ item.price_coins or 0 }} coins</span>
+            <span class="chain-pill">{{ item.approval_status or item.moderation_status or 'pending' }}</span>
+            <span class="chain-pill">{{ 'Purchased' if access.has_purchased else ('Locked' if access.is_locked else 'Open') }}</span>
+        </div>
+
+        <div class="chain-badge-row" style="margin-top:18px;">
+            {% if not access.has_purchased and access.is_locked %}
+            <form method="POST" action="/marketplace/purchase/{{ item.id }}">
+                <button type="submit" class="primary">Purchase item</button>
+            </form>
+            {% endif %}
+            {% if access.can_download and access.purchase_id %}
+            <a href="/marketplace/download/{{ access.purchase_id }}" class="secondary">Download item</a>
+            {% endif %}
+        </div>
+    </article>
+</section>
+{% endblock %}

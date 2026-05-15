@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}CHAIN | Real-time Social Experience{% endblock %}
+{% block body_class %}chain-home-page chain-wallpaper-premium{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/chain_home.css">
+<style>
+    :root {
+        --premium-bg: #fdfafb;
+        --premium-accent: #ff2f7d;
+        --premium-gradient: linear-gradient(135deg, #ff2f7d 0%, #7c3aed 100%);
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+    .story-rail {
+        display: flex;
+        gap: 15px;
+        overflow-x: auto;
+        padding: 20px 0;
+        scrollbar-width: none;
+    }
+    .story-card {
+        flex: 0 0 80px;
+        text-align: center;
+        cursor: pointer;
+    }
+    .story-ring {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        padding: 3px;
+        background: var(--premium-gradient);
+        display: inline-block;
+        margin-bottom: 5px;
+    }
+    .story-avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 2px solid white;
+        object-fit: cover;
+        background: #eee;
+    }
+    .story-name {
+        font-size: 11px;
+        font-weight: 500;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+    .live-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: #ff2f7d;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: bold;
+        z-index: 2;
+    }
+    .viewer-count {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.5);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        z-index: 2;
+        backdrop-filter: blur(4px);
+    }
+    .floating-live-btn {
+        position: fixed;
+        bottom: 90px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--premium-gradient);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        box-shadow: 0 8px 25px rgba(255, 47, 125, 0.4);
+        z-index: 100;
+        text-decoration: none;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .floating-live-btn:hover {
+        transform: scale(1.1) rotate(5deg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chain-home-container" style="max-width: 600px; margin: 0 auto; padding-bottom: 100px;">
+    
+    <!-- Story Rail -->
+    <div class="story-rail">
+        <div class="story-card">
+            <div class="story-ring" style="background: #eee;">
+                <div style="width:100%; height:100%; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; background:#fff; color:var(--premium-accent); font-size:24px;">+</div>
+            </div>
+            <span class="story-name">Your Story</span>
+        </div>
+        {% for story in stories %}
+        <a href="/status/{{ story.id }}" class="story-card" style="text-decoration:none;">
+            <div class="story-ring">
+                {% if story.avatar_url %}
+                <img src="{{ story.avatar_url }}" class="story-avatar">
+                {% else %}
+                <div class="story-avatar" style="display:flex; align-items:center; justify-content:center; background:#fff; font-weight:bold; color:var(--premium-accent);">{{ story.display_name[:1] }}</div>
+                {% endif %}
+            </div>
+            <span class="story-name">{{ story.display_name }}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Personalized Feed -->
+    <div class="main-feed" style="display:flex; flex-direction:column; gap:20px;">
+        {% for item in feed %}
+            {% if item.type == 'live_room' %}
+            <a href="/live/room/{{ item.data.id }}" class="feed-item" style="text-decoration:none; color:inherit; display:block; position:relative; border-radius:20px; overflow:hidden; background:#000; aspect-ratio: 9/12;">
+                <div class="live-badge"><i class="fas fa-circle" style="font-size:8px; margin-right:4px;"></i> LIVE</div>
+                <div class="viewer-count"><i class="fas fa-eye" style="margin-right:4px;"></i> {{ item.data.viewer_count }}</div>
+                {% if item.data.cover_url %}
+                <img src="{{ item.data.cover_url }}" style="width:100%; height:100%; object-fit:cover; opacity:0.8;">
+                {% endif %}
+                <div style="position:absolute; bottom:0; left:0; right:0; padding:20px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); color:white;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                        <div style="width:32px; height:32px; border-radius:50%; border:2px solid var(--premium-accent); overflow:hidden;">
+                            {% if item.data.creator_avatar %}<img src="{{ item.data.creator_avatar }}" style="width:100%; height:100%; object-fit:cover;">{% endif %}
+                        </div>
+                        <strong style="font-size:14px;">{{ item.data.creator_name }}</strong>
+                    </div>
+                    <h3 style="font-size:18px; margin:0; line-height:1.2;">{{ item.data.title }}</h3>
+                    <div style="margin-top:8px; display:flex; gap:8px;">
+                        <span style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:4px; font-size:11px;">#{{ item.data.category }}</span>
+                    </div>
+                </div>
+            </a>
+            {% elif item.type == 'post' %}
+            <div class="feed-item" style="background:white; border-radius:20px; padding:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <a href="/profile/@{{ item.data.username }}" style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
+                        <div style="width:40px; height:40px; border-radius:50%; background:#eee; overflow:hidden;">
+                            {% if item.data.avatar_url %}<img src="{{ item.data.avatar_url }}" style="width:100%; height:100%; object-fit:cover;">{% endif %}
+                        </div>
+                        <div>
+                            <strong style="display:block; font-size:14px;">{{ item.data.display_name }}</strong>
+                            <small style="opacity:0.6; font-size:11px;">{{ item.data.created_label }}</small>
+                        </div>
+                    </a>
+                    <button style="background:none; border:none; color:#999;"><i class="fas fa-ellipsis-h"></i></button>
+                </div>
+                
+                <p style="font-size:15px; line-height:1.5; margin-bottom:12px;">{{ item.data.caption }}</p>
+                
+                {% if item.data.media_url %}
+                <div style="border-radius:15px; overflow:hidden; margin-bottom:12px; background:#f5f5f5;">
+                    <img src="{{ item.data.media_url }}" style="width:100%; display:block;" loading="lazy">
+                </div>
+                {% endif %}
+                
+                <div style="display:flex; gap:20px; border-top:1px solid #f0f0f0; padding-top:12px;">
+                    <button style="background:none; border:none; display:flex; align-items:center; gap:6px; color:#555;"><i class="far fa-heart"></i> <small>{{ item.data.likes_count }}</small></button>
+                    <button style="background:none; border:none; display:flex; align-items:center; gap:6px; color:#555;"><i class="far fa-comment"></i> <small>{{ item.data.comments_count }}</small></button>
+                    <button style="background:none; border:none; display:flex; align-items:center; gap:6px; color:#555; margin-left:auto;"><i class="far fa-bookmark"></i></button>
+                </div>
+            </div>
+            {% elif item.type == 'marketplace_item' %}
+            <div class="feed-item" style="background:var(--premium-gradient); border-radius:20px; padding:2px;">
+                <div style="background:white; border-radius:18px; padding:15px;">
+                    <span style="background:var(--premium-accent); color:white; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:bold; margin-bottom:10px; display:inline-block;">MARKETPLACE</span>
+                    <div style="display:flex; gap:15px; align-items:center;">
+                        <div style="width:80px; height:80px; border-radius:12px; overflow:hidden; background:#eee;">
+                            {% if item.data.cover_url %}<img src="{{ item.data.cover_url }}" style="width:100%; height:100%; object-fit:cover;">{% endif %}
+                        </div>
+                        <div style="flex:1;">
+                            <h4 style="margin:0 0 4px; font-size:16px;">{{ item.data.title }}</h4>
+                            <p style="font-size:12px; opacity:0.7; margin:0 0 10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ item.data.description }}</p>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="color:var(--premium-accent);">{{ item.data.price_coins }} coins</strong>
+                                <a href="/marketplace/item/{{ item.data.id }}" class="btn-sm" style="background:var(--premium-accent); color:white; text-decoration:none; padding:4px 12px; border-radius:50px; font-size:12px;">View</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    
+    <!-- Floating Live Button -->
+    <a href="/live/studio" class="floating-live-btn">
+        <i class="fas fa-video"></i>
+    </a>
+
+    <!-- Mobile Navigation -->
+    <nav class="chain-home__mobile-nav" aria-label="Mobile navigation" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #eee;">
+        <a href="/" class="is-active"><i class="fas fa-home"></i><small>Home</small></a>
+        <a href="/discover/"><i class="fas fa-search"></i><small>Search</small></a>
+        <a href="/live/studio" style="color: var(--premium-accent); font-size: 24px;"><i class="fas fa-plus-circle"></i></a>
+        <a href="/messages/"><i class="fas fa-comment"></i><small>Chat</small></a>
+        <a href="/profile/"><i class="fas fa-user"></i><small>Profile</small></a>
+    </nav>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Lazy loading and feed interactions
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Phase 8 Homepage Loaded');
+    });
+</script>
+{% endblock %}

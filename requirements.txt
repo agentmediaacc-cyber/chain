@@ -1,0 +1,18 @@
+Flask==3.0.3
+python-dotenv==1.0.1
+supabase==2.6.0
+gunicorn==22.0.0
+requests==2.32.3
+
+# Chain platform engines
+Flask-Caching==2.3.0
+redis==5.2.1
+APScheduler==3.10.4
+Pillow==11.1.0
+python-slugify==8.0.4
+bleach==6.2.0
+better-profanity==0.7.0
+pydantic==2.10.6
+python-magic==0.4.27
+ffmpeg-python==0.2.0
+moviepy==2.1.2

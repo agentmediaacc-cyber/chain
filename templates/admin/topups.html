@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Top-ups | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-admin{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chain_portal.css">{% endblock %}
+
+{% block content %}
+<section style="max-width: 1180px; margin:0 auto; padding:20px 16px 80px;">
+    <h1 style="margin:0 0 16px;">Top-up approvals</h1>
+    <form method="GET" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+        <select name="status"><option value="">All statuses</option>{% for value in ['pending','approved','rejected'] %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ value|title }}</option>{% endfor %}</select>
+        <input type="text" name="q" value="{{ query_filter or '' }}" placeholder="Search username or reference">
+        <button class="secondary" type="submit">Filter</button>
+    </form>
+    <div style="display:grid; gap:14px;">
+        {% for row in topups %}
+        <article style="padding:18px; border-radius:22px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);">
+            <div style="display:flex; justify-content:space-between; gap:14px; align-items:start; flex-wrap:wrap;">
+                <div>
+                    <strong>{{ row.reference }}</strong>
+                    <div style="color:#cbbecf;">
+                        {{ row.amount_nad }} NAD · {{ row.coins_requested }} coins · {{ row.method }} · {{ row.status }}
+                        {% if row.proof_url %} · <span style="color:#10b981;">Proof Uploaded</span> <small style="display:block; color:rgba(255,255,255,0.4);">Path: {{ row.proof_url }}</small>{% endif %}
+                    </div>
+                </div>
+                <span class="secondary">{{ row.status|title }}</span>
+            </div>
+            {% if row.status == 'pending' %}
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+                <form method="POST" action="/admin/topups/{{ row.id }}/approve"><button class="primary" type="submit">Approve</button></form>
+                <form method="POST" action="/admin/topups/{{ row.id }}/reject" style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <input type="text" name="reason" placeholder="Reject reason">
+                    <button class="secondary" type="submit">Reject</button>
+                </form>
+            </div>
+            {% endif %}
+        </article>
+        {% else %}
+        <div style="padding:20px; border-radius:22px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); color:#cbbecf;">No top-up requests yet.</div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

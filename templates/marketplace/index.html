@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Marketplace | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-marketplace{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chain_portal.css">{% endblock %}
+
+{% block content %}
+<section class="chain-portal-shell">
+    <div class="chain-portal-header--split">
+        <div>
+            <p class="chain-portal-kicker">Marketplace</p>
+            <h1>Approved music, videos and art.</h1>
+            <p class="chain-portal-copy">Discover featured creator drops, premium media, and collectible releases.</p>
+        </div>
+        <a href="/marketplace/create" class="primary">Create listing</a>
+    </div>
+
+    <div class="chain-portal-grid chain-portal-grid--3">
+        {% for item in items %}
+        <a href="/marketplace/item/{{ item.id }}" class="chain-data-card chain-marketplace-card chain-clickable-card">
+            <div class="chain-marketplace-thumb {% if item.is_premium_locked %}chain-marketplace-thumb--blur{% endif %}"></div>
+            <div class="chain-badge-row" style="margin-bottom:10px;">
+                {% if item.is_featured %}<span class="chain-pill">Featured</span>{% endif %}
+                <span class="chain-price-pill">{{ item.price_coins or 0 }} coins</span>
+            </div>
+            <strong style="display:block; font-size:20px; margin-bottom:8px;">{{ item.title }}</strong>
+            <div class="chain-help" style="margin-bottom:10px;">{{ item.item_type|replace('_', ' ')|title }}</div>
+            {% if item.is_premium_locked %}
+            <span class="chain-pill">Premium locked preview</span>
+            {% endif %}
+        </a>
+        {% else %}
+        <a href="/marketplace/create" class="chain-empty-state chain-clickable-card" style="grid-column:1/-1;">
+            Premium drops will appear here soon. Open your first listing and send it for approval.
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Activity | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/profile_premium.css">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <section class="section-head">
+        <p>CHRONOLOGY</p>
+        <h2>Your Activity</h2>
+    </section>
+
+    <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
+        <!-- Tabs (Optional, but let's just list sections) -->
+        
+        <div class="dashboard-card" style="margin-bottom: 40px;">
+            <div class="card-title-row">
+                <h3>Hosted Live Rooms</h3>
+                <a href="/live/studio" class="primary" style="font-size: 12px; padding: 5px 15px;">Go Live</a>
+            </div>
+            <div style="display: grid; gap: 15px;">
+                {% for room in activity.rooms %}
+                <div class="feed-card" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <b style="display: block;">{{ room.title }}</b>
+                        <span style="font-size: 12px; color: #666;">{{ room.viewer_count }} Viewers • {{ room.created_at[:16] }}</span>
+                    </div>
+                    <a href="/live/room/{{ room.id }}" class="secondary" style="font-size: 11px;">View Stats</a>
+                </div>
+                {% else %}
+                <p style="text-align: center; opacity: 0.5;">No rooms hosted yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="dashboard-card" style="margin-bottom: 40px;">
+            <div class="card-title-row">
+                <h3>My Posts</h3>
+                <button class="secondary" style="font-size: 12px; padding: 5px 15px;">New Post</button>
+            </div>
+            <div style="display: grid; gap: 20px;">
+                {% for post in activity.posts %}
+                <div class="feed-card">
+                    <p style="font-size: 15px; line-height: 1.6;">{{ post.body }}</p>
+                    {% if post.media_url %}
+                    <img src="{{ post.media_url }}" alt="Media" style="width: 100%; border-radius: 15px; margin-top: 15px;">
+                    {% endif %}
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 11px; color: #666;">{{ post.created_at[:16] }}</span>
+                        <div style="display: flex; gap: 10px;">
+                            <button style="background: none; border: none; color: #444; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p style="text-align: center; opacity: 0.5;">You haven't posted anything yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-title-row">
+                <h3>Gifts Received</h3>
+            </div>
+            <div style="display: grid; gap: 15px;">
+                {% for gift in activity.gifts %}
+                <div class="feed-card" style="display: flex; align-items: center; gap: 15px;">
+                    <div style="font-size: 32px;">{{ gift.emoji }}</div>
+                    <div style="flex: 1;">
+                        <b style="display: block;">{{ gift.gift_name }}</b>
+                        <span style="font-size: 12px; color: #666;">From a fan • {{ gift.created_at[:10] }}</span>
+                    </div>
+                    <div style="font-weight: 1000; color: var(--accent);">+ {{ gift.amount }} Coins</div>
+                </div>
+                {% else %}
+                <p style="text-align: center; opacity: 0.5;">No gifts received yet. Start a live room to earn!</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="/profile/" class="secondary">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% set own_profile = viewer and profile and viewer.id == profile.id %}
+<section class="profile-hero">
+    <div class="hero-cover">
+        {% if profile.cover_url %}
+        <img src="{{ profile.cover_url }}" alt="{{ profile.full_name }}">
+        {% else %}
+        <div class="hero-cover-fallback"></div>
+        {% endif %}
+        <div class="hero-cover-glow"></div>
+    </div>
+
+    <div class="hero-profile">
+        <div class="hero-avatar" style="position:relative;">
+            {% if profile.avatar_url %}
+            <img src="{{ profile.avatar_url }}" alt="{{ profile.full_name }}">
+            {% else %}
+            <span>{{ (profile.full_name or profile.username or "C")[0]|upper }}</span>
+            {% endif %}
+            <div class="online-status-dot" style="position:absolute; bottom:8px; right:8px; width:16px; height:16px; border-radius:50%; background:{% if presence and presence.status == 'online' %}#10b981{% elif presence and presence.status == 'away' %}#f59e0b{% else %}#6b7280{% endif %}; border:3px solid #221b26;"></div>
+        </div>
+
+        <div class="hero-copy">
+            <div class="hero-kicker">
+                <span class="pill">{{ profile.current_location or profile.country_origin or "Chain Global" }}</span>
+                <span class="pill">{{ profile.profile_type|title }}</span>
+                {% if presence and presence.status != 'offline' %}
+                <span class="pill presence-pill" style="background:rgba(16, 185, 129, 0.1); color:#10b981;">
+                    <i class="fas fa-{{ 'mobile-alt' if presence.device_type == 'mobile' else 'laptop' }}"></i> {{ presence.status|title }}
+                </span>
+                {% endif %}
+                {% if profile.is_verified %}
+                <span class="pill verified-pill"><i class="fas fa-check-circle"></i> Verified</span>
+                {% endif %}
+                {% if profile.is_premium %}
+                <span class="pill premium-pill"><i class="fas fa-gem"></i> {{ profile.premium_tier|title }}</span>
+                {% endif %}
+            </div>
+
+            <h1>{{ profile.full_name or profile.username }}</h1>
+            <p class="hero-handle">@{{ profile.username }}</p>
+            <p class="hero-bio">{{ profile.bio or "This profile is connected to real Supabase data and ready for live rooms, messaging, calls, favorites, and creator tools." }}</p>
+
+            <div class="hero-meta">
+                {% if profile.relationship_status %}<span>{{ profile.relationship_status }}</span>{% endif %}
+                {% if profile.creator_category %}<span>{{ profile.creator_category }}</span>{% endif %}
+                {% if profile.age %}<span>{{ profile.age }} years</span>{% endif %}
+            </div>
+
+            {% if profile.interests %}
+            <div class="chip-row">
+                {% for item in profile.interests[:6] %}
+                <span>{{ item }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>

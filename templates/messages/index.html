@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Messages | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-profile{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chat.css">{% endblock %}
+
+{% block content %}
+<section class="chat-shell" style="max-width: 900px; margin: 0 auto; padding: 20px 16px 80px;">
+    <div class="chat-container glass-panel" style="display:grid; grid-template-columns: 320px 1fr; height: 80vh; overflow:hidden;">
+        <!-- Left Sidebar: Chat List -->
+        <aside class="chat-list" style="border-right: 1px solid rgba(255,255,255,0.1); overflow-y:auto; background: rgba(0,0,0,0.1);">
+            <div class="chat-list-header" style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="margin:0; font-size:18px;">Messages</h2>
+                <a href="/search" class="chat-new-btn" style="color:rgba(255,255,255,0.6);"><i class="fas fa-edit"></i></a>
+            </div>
+            
+            <div class="chat-items">
+                {% for convo in conversations %}
+                <a href="/messages/{{ convo.id }}" class="chat-item" style="display:flex; gap:12px; padding:16px; text-decoration:none; border-bottom:1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                    <div class="chat-item-avatar" style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:rgba(255,255,255,0.1);">
+                        {% if convo.other_profile and convo.other_profile.avatar_url %}
+                        <img src="{{ convo.other_profile.avatar_url }}" style="width:100%; height:100%; object-fit:cover;">
+                        {% else %}
+                        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;"><i class="fas fa-user" style="color:rgba(255,255,255,0.3);"></i></div>
+                        {% endif %}
+                    </div>
+                    <div class="chat-item-info" style="flex:1; overflow:hidden;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <strong style="color:white; font-size:14px;">{{ convo.display_title }}</strong>
+                            <small style="color:rgba(255,255,255,0.4); font-size:11px;">{{ convo.last_message_at|default('Just now') }}</small>
+                        </div>
+                        <p style="margin:0; font-size:13px; color:rgba(255,255,255,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            {{ convo.last_message or 'No messages yet' }}
+                        </p>
+                    </div>
+                </a>
+                {% else %}
+                <div style="padding:40px 20px; text-align:center; color:rgba(255,255,255,0.4);">
+                    <i class="fas fa-comment-dots" style="font-size:32px; margin-bottom:12px; display:block;"></i>
+                    <p>No conversations yet. Start chatting with creators!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </aside>
+
+        <!-- Right: Empty State or Thread -->
+        <main class="chat-thread-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background: rgba(255,255,255,0.02);">
+            <div style="text-align:center; color:rgba(255,255,255,0.2);">
+                <i class="fas fa-paper-plane" style="font-size:64px; margin-bottom:20px;"></i>
+                <h3 style="margin:0;">Select a chat to start messaging</h3>
+                <p>Private and secure communication on CHAIN.</p>
+            </div>
+        </main>
+    </div>
+</section>
+{% endblock %}

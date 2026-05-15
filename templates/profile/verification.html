@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Account Verification | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-profile{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/chain_portal.css">
+<style>
+    .verification-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    .preview-box {
+        width: 100%;
+        height: 200px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 2px dashed rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        margin-top: 10px;
+        transition: all 0.3s ease;
+    }
+    .preview-box:hover {
+        border-color: var(--chain-accent);
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        border-radius: 50px;
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .status-pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-approved { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-rejected { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="chain-portal-shell chain-portal-shell--narrow">
+    <div class="verification-card">
+        <h1 style="margin-bottom:10px;">Verify your account</h1>
+        <p class="chain-portal-copy" style="margin-bottom:30px;">Verification builds trust and unlocks premium creator features. Our team will review your identity documents within 24-48 hours.</p>
+
+        {% if verification %}
+        <div class="chain-data-card" style="margin-bottom:30px; background: rgba(255,255,255,0.02);">
+            <div style="display:flex; justify-content:between; align-items:center;">
+                <div>
+                    <span class="status-badge status-{{ verification.verification_status }}">
+                        {{ verification.verification_status|title }}
+                    </span>
+                </div>
+                <div style="font-size:12px; opacity:0.5;">
+                    Submitted: {{ verification.created_at }}
+                </div>
+            </div>
+            {% if verification.rejection_reason %}
+            <div style="margin-top:15px; padding:12px; background:rgba(239,68,68,0.1); border-radius:10px; color:#ef4444; font-size:14px;">
+                <strong>Rejection Reason:</strong> {{ verification.rejection_reason }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if not verification or verification.verification_status == 'rejected' %}
+        <form method="POST" enctype="multipart/form-data" class="chain-form-grid">
+            <div class="form-group" style="margin-bottom:20px;">
+                <label><span>Selfie with ID</span></label>
+                <p style="font-size:12px; opacity:0.6; margin-bottom:10px;">Hold your ID card next to your face. Ensure both are clearly visible.</p>
+                <input type="file" name="selfie" id="selfie_input" accept="image/*" capture="user" required style="display:none;">
+                <div class="preview-box" id="selfie_preview" onclick="document.getElementById('selfie_input').click();" style="cursor:pointer;">
+                    <div style="text-align:center;">
+                        <i class="fas fa-camera" style="font-size:32px; color:rgba(255,255,255,0.2);"></i>
+                        <div style="margin-top:10px; font-size:14px; opacity:0.4;">Tap to upload selfie</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom:30px;">
+                <label><span>ID Document</span></label>
+                <p style="font-size:12px; opacity:0.6; margin-bottom:10px;">Upload a clear photo or PDF of your Passport or National ID.</p>
+                <input type="file" name="id_document" id="id_document_input" accept="image/*,.pdf" required style="display:none;">
+                <div class="preview-box" id="id_document_preview" onclick="document.getElementById('id_document_input').click();" style="cursor:pointer;">
+                    <div style="text-align:center;">
+                        <i class="fas fa-id-card" style="font-size:32px; color:rgba(255,255,255,0.2);"></i>
+                        <div style="margin-top:10px; font-size:14px; opacity:0.4;">Tap to upload ID document</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:15px; margin-bottom:25px;">
+                <p style="font-size:12px; opacity:0.6; line-height:1.5; margin:0;">
+                    <i class="fas fa-shield-alt" style="margin-right:8px; color:var(--chain-accent);"></i>
+                    <strong>Privacy Notice:</strong> Your documents are encrypted and stored in a private vault. Only verified compliance administrators can access them for identity verification purposes.
+                </p>
+            </div>
+            
+            <button type="submit" class="primary" style="width:100%; height:55px; font-size:16px;">Submit for Verification</button>
+        </form>
+        {% else %}
+        <div style="text-align:center; padding:60px 20px;">
+            <div style="position:relative; display:inline-block; margin-bottom:30px;">
+                <i class="fas fa-user-check" style="font-size:64px; color:rgba(255,255,255,0.1);"></i>
+                <i class="fas fa-clock" style="position:absolute; bottom:-5px; right:-5px; font-size:24px; color:#f59e0b; background:#1a1a1a; border-radius:50%; padding:2px;"></i>
+            </div>
+            <h2 style="margin-bottom:15px;">Submission Received</h2>
+            <p style="opacity:0.7; max-width:400px; margin:0 auto 30px;">We're reviewing your documents. You'll receive a notification and a blue badge once approved.</p>
+            <a href="/profile/" class="secondary" style="padding:12px 30px;">Back to Profile</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function setupPreview(inputId, previewId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        if (!input || !preview) return;
+
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.innerHTML = `
+                        <div style="text-align:center;">
+                            <i class="fas fa-file-pdf" style="font-size:32px; color:rgba(255,255,255,0.4);"></i>
+                            <div style="font-size:12px; margin-top:8px; color:rgba(255,255,255,0.6);">${file.name}</div>
+                        </div>
+                    `;
+                }
+            }
+        });
+    }
+
+    setupPreview('selfie_input', 'selfie_preview');
+    setupPreview('id_document_input', 'id_document_preview');
+});
+</script>
+{% endblock %}

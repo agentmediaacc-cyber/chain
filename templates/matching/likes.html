@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <title>Liked You | Chain</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/matching.css') }}">
+</head>
+<body>
+  <main class="match-page full">
+    <section class="match-hero">
+      <p>LIKED YOU</p>
+      <h1>People interested in you.</h1>
+      <span>These likes come from real Chain profile actions.</span>
+    </section>
+
+    {% if profiles %}
+      <section class="mini-grid">
+        {% for p in profiles %}
+          <a class="mini-card" href="/profile/@{{ p.username }}">
+            <img src="{{ p.profile_photo }}" alt="{{ p.full_name }}">
+            <h3>{{ p.full_name }}</h3>
+            <p>{{ p.relationship_goal or "Chain member" }}</p>
+            <span>View Profile</span>
+          </a>
+        {% endfor %}
+      </section>
+    {% else %}
+      <section class="empty">
+        <h2>No likes yet</h2>
+        <p>Improve your profile photo, headline, interests, and video intro.</p>
+        <a href="/profile/create">Improve Profile</a>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

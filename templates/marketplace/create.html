@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Create Marketplace Item | CHAIN{% endblock %}
+
+{% block content %}
+<section style="max-width: 760px; margin: 0 auto; padding: 20px 16px 80px;">
+    <form method="POST" enctype="multipart/form-data" style="display:grid; gap:16px; padding:24px; border-radius:28px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);">
+        <h1 style="margin:0;">Create a marketplace item</h1>
+        <label><span>Item type</span><select name="item_type"><option value="music">Music</option><option value="video">Video</option><option value="image_art">Image / Art</option></select></label>
+        <label><span>Title</span><input type="text" name="title" required></label>
+        <label><span>Description</span><textarea name="description" rows="4"></textarea></label>
+        <label><span>Media file</span><input type="file" name="media" id="media_input"></label>
+        <div id="media_preview" style="width:100%; max-width:200px; height:120px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            <i class="fas fa-file-upload" style="color:rgba(255,255,255,0.2);"></i>
+        </div>
+        <label><span>Cover image</span><input type="file" name="cover" id="cover_input"></label>
+        <div id="cover_preview" style="width:100%; max-width:200px; height:120px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            <i class="fas fa-image" style="color:rgba(255,255,255,0.2);"></i>
+        </div>
+        <label><span>Price in coins</span><input type="number" min="0" name="price_coins"></label>
+        <label><input type="checkbox" name="premium_locked"> Premium lock until purchase</label>
+        <button type="submit" class="primary">Submit for approval</button>
+    </form>
+</section>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function setupPreview(inputId, previewId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        if (!input || !preview) return;
+
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                }
+                reader.readAsDataURL(file);
+            } else if (file) {
+                preview.innerHTML = `<div style="text-align:center;"><i class="fas fa-file" style="font-size:24px; color:rgba(255,255,255,0.4);"></i><div style="font-size:10px; margin-top:4px; color:rgba(255,255,255,0.4);">${file.name}</div></div>`;
+            }
+        });
+    }
+
+    setupPreview('media_input', 'media_preview');
+    setupPreview('cover_input', 'cover_preview');
+});
+</script>
+{% endblock %}
+{% endblock %}

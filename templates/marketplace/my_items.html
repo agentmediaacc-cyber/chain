@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}My Marketplace Items | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-marketplace{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chain_portal.css">{% endblock %}
+
+{% block content %}
+<section class="chain-portal-shell">
+    <div class="chain-portal-header--split">
+        <h1 style="margin:0;">My marketplace items</h1>
+        <a href="/marketplace/create" class="primary">New item</a>
+    </div>
+    <div class="chain-list">
+        {% for item in items %}
+        <article class="chain-data-card">
+            <div class="chain-list-item">
+                <div>
+                    <strong>{{ item.title }}</strong>
+                    <div class="chain-help">{{ item.item_type }} · moderation {{ item.moderation_status or 'pending' }} · approval {{ item.approval_status or 'pending' }}</div>
+                </div>
+                <div class="chain-badge-row">
+                    <span class="chain-status-{{ 'approved' if (item.approval_status == 'approved' or item.moderation_status == 'approved') else ('rejected' if (item.approval_status == 'rejected' or item.moderation_status == 'rejected') else 'pending') }}">{{ item.approval_status or item.moderation_status or 'pending' }}</span>
+                    {% if item.is_featured %}<span class="chain-pill">Featured</span>{% endif %}
+                </div>
+            </div>
+        </article>
+        {% else %}
+        <div class="chain-empty-state">Your creator shop is ready for its first premium drop.</div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Chat Thread | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/profile_premium.css">
+<style>
+    .thread-shell {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px 120px;
+    }
+
+    .thread-card {
+        display: grid;
+        gap: 0;
+        border-radius: 28px;
+        overflow: hidden;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .thread-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 22px;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+        background: rgba(5,5,16,.72);
+        backdrop-filter: blur(20px);
+    }
+
+    .thread-head-copy {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .thread-head-copy h2,
+    .thread-head-copy p {
+        margin: 0;
+    }
+
+    .thread-head-copy p {
+        color: #9ca3af;
+    }
+
+    .thread-body {
+        min-height: 52vh;
+        max-height: 62vh;
+        overflow-y: auto;
+        display: grid;
+        gap: 12px;
+        padding: 22px;
+        background:
+            radial-gradient(circle at 18% 12%, rgba(255,47,125,.08), transparent 24%),
+            radial-gradient(circle at 84% 14%, rgba(0,212,255,.06), transparent 18%),
+            linear-gradient(180deg, rgba(8,8,20,.94), rgba(5,5,16,.98));
+    }
+
+    .chat-bubble {
+        max-width: min(78%, 520px);
+        padding: 14px 16px;
+        border-radius: 22px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(255,255,255,.05);
+    }
+
+    .chat-bubble.mine {
+        margin-left: auto;
+        background: linear-gradient(135deg, rgba(255,47,125,.18), rgba(124,58,237,.18));
+    }
+
+    .chat-bubble p,
+    .chat-bubble small {
+        margin: 0;
+    }
+
+    .chat-bubble small {
+        display: block;
+        margin-top: 8px;
+        color: #9ca3af;
+    }
+
+    .thread-empty {
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 42px 22px;
+    }
+
+    .thread-form {
+        display: flex;
+        gap: 12px;
+        padding: 18px 22px 22px;
+        border-top: 1px solid rgba(255,255,255,.06);
+        background: rgba(255,255,255,.03);
+    }
+
+    .thread-form input {
+        flex: 1;
+        min-width: 0;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.1);
+        background: rgba(255,255,255,.05);
+        color: #fff;
+        padding: 14px 16px;
+        outline: none;
+    }
+
+    .thread-form button,
+    .thread-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.1);
+        padding: 12px 16px;
+        color: #fff;
+        text-decoration: none;
+        background: rgba(255,255,255,.05);
+        font-weight: 800;
+    }
+
+    .thread-link.primary,
+    .thread-form button {
+        background: linear-gradient(135deg, rgba(255,47,125,.2), rgba(124,58,237,.22));
+    }
+
+    @media (max-width: 760px) {
+        .thread-shell {
+            padding: 0 16px 110px;
+        }
+
+        .thread-head {
+            flex-wrap: wrap;
+        }
+
+        .thread-body {
+            min-height: 46vh;
+            max-height: none;
+        }
+
+        .chat-bubble {
+            max-width: 90%;
+        }
+
+        .thread-form {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p>DIRECT CHAT</p>
+    <h2>{{ convo.other_profile.full_name if convo.other_profile else convo.title or "Conversation" }}</h2>
+</section>
+
+<section class="thread-shell">
+    <div class="thread-card">
+        <header class="thread-head">
+            <div class="thread-head-copy">
+                <h2>{{ convo.other_profile.full_name if convo.other_profile else convo.title or "Conversation" }}</h2>
+                <p>{{ convo.other_profile.current_location if convo.other_profile else "Secure Chain conversation" }}</p>
+            </div>
+            <div class="action-cluster">
+                <a class="thread-link" href="/chat/">Back to Messages</a>
+                {% if convo.other_profile %}
+                <a class="thread-link primary" href="/profile/@{{ convo.other_profile.username }}">View Profile</a>
+                {% endif %}
+            </div>
+        </header>
+
+        <div class="thread-body">
+            {% if messages %}
+                {% for m in messages %}
+                <article class="chat-bubble {% if current and m.sender_profile_id == current.id %}mine{% endif %}">
+                    <p>{{ m.body or m.message }}</p>
+                    <small>{{ m.created_at }}</small>
+                </article>
+                {% endfor %}
+            {% else %}
+            <div class="thread-empty">
+                <div class="profile-empty-card" style="max-width: 420px;">
+                    <div class="profile-empty-icon"><i class="fas fa-comments"></i></div>
+                    <h3>Start the conversation</h3>
+                    <p>There are no messages in this thread yet. Send a respectful first message to begin.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <form class="thread-form" method="POST" action="{{ url_for('chat.send_thread_message', thread_id=convo.id) }}">
+            <input name="message" placeholder="Write a message..." autocomplete="off" required>
+            <button type="submit">Send Message</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

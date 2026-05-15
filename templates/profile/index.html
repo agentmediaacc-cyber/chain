@@ -1,0 +1,153 @@
+{% extends "profile/base_profile.html" %}
+
+{% block profile_body %}
+<section class="profile-dashboard-grid" style="display: grid; grid-template-columns: 1fr 300px; gap: 20px; padding: 20px;">
+    
+    <div class="profile-main-column">
+        <!-- Tab Navigation -->
+        <div class="glass-panel" style="padding: 10px; margin-bottom: 20px; display: flex; gap: 10px; overflow-x: auto;">
+            <button class="tab-btn active" onclick="showTab('posts')" style="background:var(--premium-gradient); color:white; border:none; padding:8px 20px; border-radius:50px; cursor:pointer;">Posts</button>
+            <button class="tab-btn" onclick="showTab('live')" style="background:rgba(255,255,255,0.1); color:#333; border:none; padding:8px 20px; border-radius:50px; cursor:pointer;">Live Rooms</button>
+            <button class="tab-btn" onclick="showTab('marketplace')" style="background:rgba(255,255,255,0.1); color:#333; border:none; padding:8px 20px; border-radius:50px; cursor:pointer;">Marketplace</button>
+            <button class="tab-btn" onclick="showTab('music')" style="background:rgba(255,255,255,0.1); color:#333; border:none; padding:8px 20px; border-radius:50px; cursor:pointer;">Music</button>
+        </div>
+
+        <!-- Posts Tab -->
+        <div id="tab-posts" class="tab-content">
+            <section class="glass-panel" style="padding: 20px;">
+                <h2 style="margin-bottom:20px;">Recent Posts</h2>
+                {% if content.posts %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                    {% for post in content.posts %}
+                    <article class="post-card" style="background:#f9f9f9; border-radius:15px; overflow:hidden;">
+                        {% if post.media_url %}<img src="{{ post.media_url }}" style="width:100%; aspect-ratio:1; object-fit:cover;">{% endif %}
+                        <div style="padding:12px;">
+                            <p style="font-size:14px; margin:0 0 8px;">{{ post.caption or post.body }}</p>
+                            <small style="opacity:0.6;">{{ post.created_at }}</small>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center; padding:40px; opacity:0.6;">No posts published yet.</div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Live Tab -->
+        <div id="tab-live" class="tab-content" style="display:none;">
+            <section class="glass-panel" style="padding: 20px;">
+                <h2 style="margin-bottom:20px;">Live History</h2>
+                {% if content.rooms %}
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    {% for room in content.rooms %}
+                    <a href="/live/room/{{ room.id }}" style="text-decoration:none; color:inherit; display:flex; gap:15px; background:#f9f9f9; padding:12px; border-radius:15px; align-items:center;">
+                        <div style="width:60px; height:60px; border-radius:10px; background:var(--premium-accent); display:flex; align-items:center; justify-content:center; color:white;">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <strong style="display:block;">{{ room.title }}</strong>
+                            <small style="opacity:0.6;">{{ room.category }} • {{ room.viewer_count }} viewers</small>
+                        </div>
+                        <span style="font-size:12px; font-weight:bold; color:var(--premium-accent);">{{ room.status|upper }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center; padding:40px; opacity:0.6;">No live sessions recorded.</div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Marketplace Tab -->
+        <div id="tab-marketplace" class="tab-content" style="display:none;">
+            <section class="glass-panel" style="padding: 20px;">
+                <h2 style="margin-bottom:20px;">Marketplace Drops</h2>
+                {% if content.marketplace %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+                    {% for item in content.marketplace %}
+                    <a href="/marketplace/item/{{ item.id }}" style="text-decoration:none; color:inherit; background:#f9f9f9; border-radius:15px; overflow:hidden; display:block;">
+                        <img src="{{ item.cover_url }}" style="width:100%; aspect-ratio:1; object-fit:cover;">
+                        <div style="padding:12px;">
+                            <strong style="display:block; font-size:14px; margin-bottom:4px;">{{ item.title }}</strong>
+                            <span style="color:var(--premium-accent); font-weight:bold;">{{ item.price_coins }} coins</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center; padding:40px; opacity:0.6;">No marketplace items available.</div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Music Tab -->
+        <div id="tab-music" class="tab-content" style="display:none;">
+            <section class="glass-panel" style="padding: 20px;">
+                <h2 style="margin-bottom:20px;">Albums & Music</h2>
+                {% if content.albums %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px;">
+                    {% for album in content.albums %}
+                    <div style="background:#f9f9f9; border-radius:15px; overflow:hidden; text-align:center; padding:15px;">
+                        <img src="{{ album.cover_url }}" style="width:120px; height:120px; border-radius:10px; box-shadow:0 8px 15px rgba(0,0,0,0.1); margin-bottom:12px;">
+                        <strong style="display:block; font-size:14px;">{{ album.title }}</strong>
+                        <small style="opacity:0.6;">{{ album.genre }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center; padding:40px; opacity:0.6;">No music albums uploaded.</div>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+
+    <aside class="profile-side-column">
+        <!-- Wallet Summary -->
+        <section class="glass-panel" style="padding: 20px; margin-bottom:20px;">
+            <h3 style="font-size:14px; opacity:0.6; margin-bottom:15px;">WALLET SUMMARY</h3>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Balance</span>
+                    <strong style="color:var(--premium-accent); font-size:18px;">{{ wallet.coin_balance or 0 }}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Earnings</span>
+                    <strong>{{ wallet.gift_earnings or 0 }}</strong>
+                </div>
+                <a href="/wallet/" style="background:#f0f0f0; color:#333; text-decoration:none; text-align:center; padding:10px; border-radius:10px; font-size:12px; font-weight:bold; margin-top:10px;">Go to Wallet</a>
+            </div>
+        </section>
+
+        <!-- Stats Highlights -->
+        <section class="glass-panel" style="padding: 20px;">
+            <h3 style="font-size:14px; opacity:0.6; margin-bottom:15px;">CREATOR RANK</h3>
+            <div style="text-align:center; padding:10px 0;">
+                <div style="width:80px; height:80px; border-radius:50%; background:var(--premium-gradient); color:white; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:32px;">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <strong style="display:block; font-size:16px;">Verified Creator</strong>
+                <p style="font-size:12px; opacity:0.6; margin-top:5px;">Ranking top 10% in Windhoek this week.</p>
+            </div>
+        </section>
+    </aside>
+</section>
+
+<script>
+function showTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+    // Deactivate all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.style.background = 'rgba(255,255,255,0.1)';
+        btn.style.color = '#333';
+    });
+    
+    // Show selected tab
+    document.getElementById('tab-' + tabName).style.display = 'block';
+    // Activate selected button
+    event.target.style.background = 'var(--premium-gradient)';
+    event.target.style.color = 'white';
+}
+</script>
+{% endblock %}

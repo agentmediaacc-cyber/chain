@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Security | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/profile_premium.css">
+{% endblock %}
+
+{% block content %}
+<section class="profile-form-shell">
+    <div class="glass-panel form-panel">
+        <div class="panel-head">
+            <div>
+                <p>SECURITY</p>
+                <h2>Password and recovery</h2>
+            </div>
+            <a class="profile-empty-btn" href="/profile/settings">Back to Settings</a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="form-error" {% if category == 'success' %}style="background: rgba(0,212,255,.12); border-color: rgba(0,212,255,.28); color: #93c5fd;"{% endif %}>{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="metric-stack" style="margin-bottom: 22px;">
+            <div><span>Email</span><strong>{{ account_security.email or profile.email }}</strong></div>
+            <div><span>Password login enabled</span><strong>{{ 'Yes' if account_security.password_set or profile.password_set else 'No' }}</strong></div>
+            <div><span>Recovery enabled</span><strong>{{ 'Yes' if account_security.recovery_enabled != false else 'No' }}</strong></div>
+        </div>
+
+        <form method="POST" action="/profile/security/set-password" class="profile-form-grid">
+            <label class="full"><span>New password</span><input type="password" name="password" minlength="8" required></label>
+            <label class="full"><span>Confirm password</span><input type="password" name="confirm_password" minlength="8" required></label>
+            <div class="full action-cluster">
+                <button class="profile-empty-btn" type="submit">Set Password</button>
+                <a class="profile-empty-btn" href="/auth/forgot-password">Use Recovery Email</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

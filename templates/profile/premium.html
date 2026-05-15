@@ -1,0 +1,24 @@
+{% extends "profile/base_profile.html" %}
+
+{% block profile_body %}
+<section class="glass-panel">
+    <div class="panel-head">
+        <div>
+            <p>PREMIUM MEMBERSHIP</p>
+            <h2>{{ profile.full_name }} premium overview</h2>
+        </div>
+    </div>
+    <div class="premium-tier-banner">
+        <div>
+            <span class="pill premium-pill"><i class="fas fa-gem"></i> {{ profile.premium_tier|title }}</span>
+            <h3>{{ "Premium member" if profile.is_premium else "Free member" }}</h3>
+            <p>Premium signals, creator cards, wallet context, live access settings, and creator tooling all render from your Supabase-backed profile layer.</p>
+        </div>
+        <div class="metric-stack">
+            <div><span>Wallet balance</span><strong>{{ wallet.coin_balance or profile.wallet_balance or 0 }}</strong></div>
+            <div><span>Profile completion</span><strong>{{ profile.profile_completion or 0 }}%</strong></div>
+            <div><span>Creator tools</span><strong>{{ "Ready" if creator_tools else "Unavailable" }}</strong></div>
+        </div>
+    </div>
+</section>
+{% endblock %}

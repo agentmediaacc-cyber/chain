@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}History | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/profile_premium.css">
+{% endblock %}
+
+{% block content %}
+<section class="profile-form-shell">
+    <div class="glass-panel">
+        <div class="panel-head"><div><p>HISTORY</p><h2>Recently viewed activity</h2></div></div>
+        {% if items %}
+        <div class="live-room-list">
+            {% for item in items %}
+            <a class="live-room-card" href="{{ item.href }}">
+                <div>
+                    <b>{{ item.title }}</b>
+                    <span>{{ item.subtitle }}</span>
+                </div>
+                <small>{{ item.created_at or "" }}</small>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        {% set title = "No recent views yet" %}
+        {% set message = "When `chain_recent_views` starts collecting history, this page will populate automatically." %}
+        {% set action_href = "/live" %}
+        {% set action_label = "Open Live" %}
+        {% set icon = "fa-clock-rotate-left" %}
+        {% include "profile/partials/profile_empty_state.html" %}
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

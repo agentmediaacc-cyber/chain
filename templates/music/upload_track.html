@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Track | CHAIN{% endblock %}
+
+{% block content %}
+<section style="max-width: 760px; margin: 0 auto; padding: 20px 16px 80px;">
+    <form method="POST" enctype="multipart/form-data" style="display:grid; gap:16px; padding:24px; border-radius:28px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);">
+        <h1 style="margin:0;">Upload track</h1>
+        <label><span>Album ID</span><input type="text" name="album_id"></label>
+        <label><span>Title</span><input type="text" name="title" required></label>
+        <label><span>Audio file</span><input type="file" name="audio" id="audio_input" accept="audio/*"></label>
+        <div id="audio_preview" style="padding:10px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:none;">
+            <audio id="audio_player" controls style="width:100%;"></audio>
+            <div id="audio_name" style="font-size:12px; margin-top:8px; color:rgba(255,255,255,0.6); text-align:center;"></div>
+        </div>
+        <label><span>Price in coins</span><input type="number" min="0" name="price_coins"></label>
+        <button type="submit" class="primary">Submit track</button>
+    </form>
+</section>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('audio_input');
+    const preview = document.getElementById('audio_preview');
+    const player = document.getElementById('audio_player');
+    const name = document.getElementById('audio_name');
+    
+    if (input && preview && player && name) {
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                player.src = url;
+                name.textContent = file.name;
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

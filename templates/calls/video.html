@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Video Call | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/calls.css">
+{% endblock %}
+
+{% block content %}
+<section class="call-shell">
+    <div class="call-stage">
+        <video id="localVideo" autoplay playsinline muted></video>
+        <div class="call-empty" id="callEmpty">
+            <div>
+                <p>VIDEO CALL</p>
+                <h1>{{ target.full_name or target.username }}</h1>
+                <span>@{{ target.username }}</span>
+                <small>{% if call_record %}Call record created in Supabase.{% else %}Call record table unavailable or insert skipped safely.{% endif %}</small>
+            </div>
+        </div>
+        <div class="call-target-card">
+            <b>{{ target.full_name or target.username }}</b>
+            <span>@{{ target.username }}</span>
+        </div>
+    </div>
+
+    <div class="call-controls">
+        <button id="micToggle" type="button">Mute Mic</button>
+        <button id="cameraToggle" type="button">Hide Camera</button>
+        <button id="startCamera" type="button">Start Camera</button>
+        <button id="endCall" class="danger" type="button">End Call</button>
+    </div>
+</section>
+<script src="/static/js/calls.js"></script>
+{% endblock %}

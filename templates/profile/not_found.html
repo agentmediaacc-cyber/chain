@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Profile Not Found | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/profile_premium.css">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <section class="section-head">
+        <p>ERROR</p>
+        <h2>Chain Not Found</h2>
+    </section>
+
+    <div style="max-width: 800px; margin: 0 auto; padding: 0 20px; text-align: center;">
+        <div class="dashboard-card" style="padding: 80px 40px; background: radial-gradient(circle at top right, rgba(255,47,125,0.1), transparent);">
+            <div style="font-size: 100px; margin-bottom: 40px; opacity: 0.2;">👻</div>
+            <h3 style="font-size: 28px; margin-bottom: 20px;">@{{ username }} has left the Chain</h3>
+            <p style="color: #666; font-size: 18px; line-height: 1.6; max-width: 500px; margin: 0 auto 40px;">
+                The profile you are looking for doesn't exist or has been set to private. Why not explore other amazing creators on Chain?
+            </p>
+            
+            <div style="display: flex; justify-content: center; gap: 20px;">
+                <a href="/" class="primary" style="padding: 15px 40px;">Return Home</a>
+                <a href="/discover/" class="secondary" style="padding: 15px 40px;">Discover People</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Request Top-up | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-wallet{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chain_portal.css">{% endblock %}
+
+{% block content %}
+<section class="chain-portal-shell chain-portal-shell--narrow">
+    <form method="POST" enctype="multipart/form-data" class="chain-form-card chain-form-grid">
+        <h1>Request a wallet top-up</h1>
+        <p class="chain-portal-copy">Manual payment review is required. MTC Maris and FNB bank transfer are available now. Card payments will open once a gateway is connected.</p>
+        <div class="chain-data-card chain-rate-card" style="padding:18px;">
+            <strong>1 CHAIN coin = NAD 5</strong>
+        </div>
+        <label><span>Amount (NAD)</span><input type="number" step="0.01" min="5" name="amount_nad" required></label>
+        <label><span>Payment method</span>
+            <select name="payment_method">
+                <option value="MTC Maris">MTC Maris</option>
+                <option value="FNB bank transfer">FNB bank transfer</option>
+                <option value="Card">Card</option>
+            </select>
+        </label>
+        <label><span>Payment Proof</span><input type="file" name="proof" id="proof_input" accept="image/*,application/pdf"></label>
+        <div id="proof_preview" style="width:100%; height:120px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            <i class="fas fa-receipt" style="font-size:40px; color:rgba(255,255,255,0.2);"></i>
+        </div>
+        <button type="submit" class="primary">Create top-up request</button>
+    </form>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('proof_input');
+    const preview = document.getElementById('proof_preview');
+    if (input && preview) {
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.innerHTML = `<div style="text-align:center;"><i class="fas fa-file-pdf" style="font-size:24px; color:rgba(255,255,255,0.4);"></i><div style="font-size:10px; margin-top:4px; color:rgba(255,255,255,0.4);">${file.name}</div></div>`;
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

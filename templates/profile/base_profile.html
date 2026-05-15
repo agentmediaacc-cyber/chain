@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ profile.full_name if profile else 'Profile' }} | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/profile_premium.css">
+{% endblock %}
+
+{% block content %}
+<div class="premium-profile-shell">
+    {% include "profile/partials/profile_header.html" %}
+    {% include "profile/partials/profile_stats.html" %}
+    {% include "profile/partials/profile_actions.html" %}
+    {% include "profile/partials/profile_tabs.html" %}
+    {% block profile_body %}{% endblock %}
+</div>
+{% endblock %}

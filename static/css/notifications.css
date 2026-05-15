@@ -1,0 +1,30 @@
+*{box-sizing:border-box}
+body{margin:0;background:#070711;color:#fff;font-family:Inter,Arial,sans-serif}
+a{text-decoration:none;color:inherit}
+.notify-side{position:fixed;left:0;top:0;width:260px;height:100vh;padding:22px;background:#0d0d1d;border-right:1px solid rgba(255,255,255,.1)}
+.notify-side h2{font-size:25px}
+.notify-side a{display:block;padding:14px 16px;border-radius:18px;margin:8px 0;background:rgba(255,255,255,.07);font-weight:900}
+.notify-side a:hover{background:linear-gradient(135deg,#ff2f7d,#7c3aed)}
+.notify-page{margin-left:260px;padding:24px}
+.notify-hero{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:34px;border-radius:34px;background:radial-gradient(circle at top left,rgba(255,47,125,.36),transparent 42%),linear-gradient(135deg,#15152c,#090914);border:1px solid rgba(255,255,255,.12);margin-bottom:22px}
+.notify-hero p{color:#ff9fc1;font-weight:1000;letter-spacing:.16em;margin:0}
+.notify-hero h1{font-size:52px;margin:8px 0}
+.notify-hero span{color:#d6d6e4}
+.notify-hero a,.empty-notify a,.read-btn{padding:13px 18px;border-radius:999px;background:linear-gradient(135deg,#ff2f7d,#7c3aed);font-weight:1000;text-align:center}
+.notify-list{display:grid;gap:14px}
+.notify-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px;border-radius:28px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.12)}
+.notify-card.unread{border-color:rgba(255,47,125,.7);background:rgba(255,47,125,.1)}
+.notify-main{display:flex;align-items:center;gap:16px;flex:1}
+.notify-icon{width:62px;height:62px;border-radius:22px;display:grid;place-items:center;background:rgba(255,255,255,.1);font-size:28px}
+.notify-card h3{margin:0 0 6px}
+.notify-card p{margin:0;color:#ddd}
+.notify-card small{display:block;margin-top:7px;color:#aaa}
+.empty-notify{padding:34px;border-radius:30px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.12);text-align:center}
+.empty-notify a{display:inline-block;margin-top:12px}
+@media(max-width:850px){
+  .notify-side{position:relative;width:auto;height:auto}
+  .notify-page{margin-left:0}
+  .notify-hero{flex-direction:column;align-items:flex-start}
+  .notify-hero h1{font-size:36px}
+  .notify-card{flex-direction:column;align-items:flex-start}
+}

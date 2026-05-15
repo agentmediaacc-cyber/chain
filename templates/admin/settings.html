@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}CHAIN Admin Settings{% endblock %}
+
+{% block content %}
+<section style="max-width: 1080px; margin: 0 auto; padding: 18px 16px 80px;">
+    <div style="display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:22px; flex-wrap:wrap;">
+        <div>
+            <p style="margin:0 0 8px; color:#f4a5bd; font-size:12px; letter-spacing:.14em; text-transform:uppercase; font-weight:900;">Site Settings</p>
+            <h1 style="margin:0 0 8px; font-size:42px; line-height:1;">Tune CHAIN without editing code.</h1>
+            <p style="margin:0; color:#cbbecf;">Store JSON settings for homepage controls, moderation rules, creator programs and platform switches.</p>
+        </div>
+        <a href="/admin/dashboard" class="secondary">Back to dashboard</a>
+    </div>
+
+    {% if error %}
+    <div style="margin-bottom:16px; padding:14px 16px; border-radius:18px; background: rgba(255,92,81,.12); border: 1px solid rgba(255,92,81,.22); color: #ffd5d0;">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+    <div style="margin-bottom:16px; padding:14px 16px; border-radius:18px; background: rgba(56,255,179,.1); border: 1px solid rgba(56,255,179,.18); color: #dbfff0;">{{ success }}</div>
+    {% endif %}
+
+    <div style="display:grid; grid-template-columns: 1fr .9fr; gap:16px;">
+        <form method="POST" style="padding:22px; border-radius:28px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); display:grid; gap:16px;">
+            <label style="display:grid; gap:8px;">
+                <span style="font-weight:800;">Setting key</span>
+                <input type="text" name="setting_key" value="homepage_controls" style="min-height: 48px; border-radius: 16px; border:1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: white; padding: 0 14px;">
+            </label>
+            <label style="display:grid; gap:8px;">
+                <span style="font-weight:800;">Setting value JSON</span>
+                <textarea name="setting_value" rows="18" style="border-radius: 18px; border:1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: white; padding: 14px;">{{ site_settings_json }}</textarea>
+            </label>
+            <button type="submit" style="min-height: 50px; border:0; border-radius:999px; background: linear-gradient(135deg, #ff4d8d, #ff5c51); color:white; font-weight:900;">Save settings</button>
+        </form>
+
+        <div style="display:grid; gap:16px;">
+            <section style="padding:22px; border-radius:28px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);">
+                <h2 style="margin:0 0 14px;">Saved settings</h2>
+                {% for row in settings_rows %}
+                <div style="padding:12px 0; border-top:1px solid rgba(255,255,255,.06);">
+                    <strong>{{ row.setting_key }}</strong>
+                    <div style="color:#cbbecf; word-break:break-word;">{{ row.setting_value }}</div>
+                </div>
+                {% else %}
+                <p style="margin:0; color:#cbbecf;">No settings stored yet.</p>
+                {% endfor %}
+            </section>
+            <section style="padding:22px; border-radius:28px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);">
+                <h2 style="margin:0 0 14px;">Admin operators</h2>
+                {% for row in admin_rows %}
+                <div style="padding:12px 0; border-top:1px solid rgba(255,255,255,.06);">
+                    <strong>{{ row.username }}</strong>
+                    <div style="color:#cbbecf;">{{ row.role }}{% if row.is_master %} · master{% endif %}</div>
+                </div>
+                {% else %}
+                <p style="margin:0; color:#cbbecf;">No admin users found yet.</p>
+                {% endfor %}
+            </section>
+        </div>
+    </div>
+</section>
+{% endblock %}

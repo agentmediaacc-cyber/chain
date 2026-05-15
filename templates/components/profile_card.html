@@ -1,0 +1,30 @@
+<article class="profile-card">
+  <a class="profile-cover" href="/profile/@{{ profile.username }}" style="background-image:url('{{ profile.cover_url or profile.cover_photo or profile.avatar_url or profile.profile_photo }}')">
+    <span class="status {{ profile.online_status or 'offline' }}">{{ profile.online_status or "offline" }}</span>
+    {% if profile.is_verified %}<span class="verified">✅ Verified</span>{% endif %}
+  </a>
+
+  <div class="profile-body">
+    {% if profile.avatar_url or profile.profile_photo %}
+    <img class="avatar" src="{{ profile.avatar_url or profile.profile_photo }}" alt="{{ profile.full_name }}">
+    {% else %}
+    <div class="avatar" style="display:grid;place-items:center;background:rgba(255,255,255,.08);font-weight:800;">
+      {{ (profile.full_name or profile.username or "C")[0]|upper }}
+    </div>
+    {% endif %}
+    <h3>{{ profile.full_name }}{% if profile.age %}, {{ profile.age }}{% endif %}</h3>
+    <p>{{ profile.current_location or profile.country_origin }}</p>
+
+    <div class="chips">
+      {% for item in profile.interests or [] %}
+        <span>{{ item }}</span>
+      {% endfor %}
+    </div>
+
+    <div class="card-actions">
+      <a href="/chat/start/{{ profile.username }}">💬 Message</a>
+      <a href="/calls/video/{{ profile.username }}">📹 Video Call</a>
+      <a href="/profile/@{{ profile.username }}">👤 View Profile</a>
+    </div>
+  </div>
+</article>

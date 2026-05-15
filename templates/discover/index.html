@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Discover | Chain Premium{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p>DISCOVER</p>
+    <h2>{{ title }}</h2>
+</section>
+
+<div class="discover-nav" style="max-width: 1280px; margin: auto; padding: 0 24px; display: flex; gap: 12px; overflow-x: auto; padding-bottom: 20px;">
+    <a href="/discover/recommended" class="secondary {% if section == 'recommended' %}active{% endif %}" style="white-space: nowrap; padding: 12px 24px;">Recommended</a>
+    <a href="/discover/live" class="secondary {% if section == 'live' %}active{% endif %}" style="white-space: nowrap; padding: 12px 24px;">Live Now</a>
+    <a href="/discover/trending" class="secondary {% if section == 'trending' %}active{% endif %}" style="white-space: nowrap; padding: 12px 24px;">Trending</a>
+    <a href="/discover/members" class="secondary {% if section == 'members' %}active{% endif %}" style="white-space: nowrap; padding: 12px 24px;">Members</a>
+    <a href="/discover/nearby" class="secondary {% if section == 'nearby' %}active{% endif %}" style="white-space: nowrap; padding: 12px 24px;">Nearby</a>
+</div>
+
+<section class="grid-container" style="max-width: 1280px; margin: auto; padding: 0 24px;">
+    {% if section == 'live' %}
+        <div class="live-grid">
+            {% for room in items %}
+              <a class="live-card" href="/live/room/{{ room.id }}">
+                <div class="badge">● {{ room.status|upper }}</div>
+                <h3>{{ room.title }}</h3>
+                <div class="mini-row">
+                  <span>👥 {{ room.viewer_count or 0 }}</span>
+                  <span>{{ room.access_type|title }}</span>
+                </div>
+              </a>
+            {% else %}
+              <div class="empty-card"><h3>No live rooms</h3><a href="/live/studio">Start One</a></div>
+            {% endfor %}
+        </div>
+    {% elif section == 'trending' %}
+        <div class="feed-list">
+            {% for post in items %}
+              <article class="feed-card">
+                {% if post.media_url %}
+                  <img src="{{ post.media_url }}" alt="Post media">
+                {% endif %}
+                <p>{{ post.body or "Media post" }}</p>
+                <span>{{ post.created_at }}</span>
+              </article>
+            {% else %}
+              <div class="empty-card"><h3>No trending posts</h3></div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="profile-grid">
+            {% for profile in items %}
+              <a class="profile-card" href="/profile/@{{ profile.username }}">
+                <div class="avatar">
+                  {% if profile.avatar_url %}
+                    <img src="{{ profile.avatar_url }}" alt="{{ profile.full_name }}">
+                  {% else %}
+                    <span>{{ (profile.full_name or profile.username or "C")[0]|upper }}</span>
+                  {% endif %}
+                </div>
+                <h3>{{ profile.full_name or profile.username }}</h3>
+                <p>@{{ profile.username }}</p>
+                <small>{{ profile.current_location or "Location not set" }}</small>
+              </a>
+              <div style="display: flex; gap: 8px; margin-top: -8px; margin-bottom: 18px; flex-wrap: wrap;">
+                <a class="secondary" href="/chat/start/{{ profile.username }}" style="padding: 10px 14px;">Message</a>
+                <a class="secondary" href="/calls/video/{{ profile.username }}" style="padding: 10px 14px;">Video Call</a>
+                <a class="secondary" href="/profile/@{{ profile.username }}" style="padding: 10px 14px;">View Profile</a>
+                <form method="POST" action="/profile/@{{ profile.username }}/follow">
+                    <button class="secondary" type="submit" style="padding: 10px 14px;">Follow</button>
+                </form>
+                <form method="POST" action="/profile/@{{ profile.username }}/favorite">
+                    <button class="secondary" type="submit" style="padding: 10px 14px;">Favorite</button>
+                </form>
+              </div>
+            {% else %}
+              <div class="empty-card"><h3>No members found</h3></div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>
+
+<style>
+    .secondary.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+</style>
+{% endblock %}

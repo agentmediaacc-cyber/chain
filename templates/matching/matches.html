@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <title>Your Matches | Chain</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/matching.css') }}">
+</head>
+<body>
+  <main class="match-page full">
+    <section class="match-hero">
+      <p>REAL MATCHES</p>
+      <h1>People who liked you back.</h1>
+      <span>These are real mutual matches stored in Supabase.</span>
+    </section>
+
+    {% if profiles %}
+      <section class="mini-grid">
+        {% for p in profiles %}
+          <a class="mini-card" href="/profile/@{{ p.username }}">
+            <img src="{{ p.profile_photo }}" alt="{{ p.full_name }}">
+            <h3>{{ p.full_name }}</h3>
+            <p>{{ p.current_location or p.country_origin }}</p>
+            <span>💬 Open Profile</span>
+          </a>
+        {% endfor %}
+      </section>
+    {% else %}
+      <section class="empty">
+        <h2>No matches yet</h2>
+        <p>Go to discover and like real profiles.</p>
+        <a href="/matching/">Start Matching</a>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

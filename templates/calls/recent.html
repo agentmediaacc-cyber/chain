@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Recent Calls | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-profile{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/calls.css">{% endblock %}
+
+{% block content %}
+<section class="calls-shell" style="max-width: 600px; margin: 0 auto; padding: 20px 16px 80px;">
+    <div class="glass-panel" style="padding: 24px; border-radius: 28px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h1 style="margin:0; font-size:24px;">Recent Calls</h1>
+            <a href="/messages/" class="secondary" style="font-size:13px; text-decoration:none;">New Message</a>
+        </div>
+
+        <div class="call-list" style="display:flex; flex-direction:column; gap:12px;">
+            {% for call in calls %}
+            <article class="call-item" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-radius:18px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                <div style="display:flex; gap:14px; align-items:center;">
+                    <div style="width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center;">
+                        {% if call.call_type == 'video' %}
+                        <i class="fas fa-video" style="color:#00d4ff;"></i>
+                        {% else %}
+                        <i class="fas fa-phone" style="color:#10b981;"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <strong style="display:block; font-size:15px; color:white;">
+                            {% if call.caller_profile_id == profile.id %}
+                            Outgoing {{ call.call_type|title }}
+                            {% else %}
+                            Incoming {{ call.call_type|title }}
+                            {% endif %}
+                        </strong>
+                        <small style="color:rgba(255,255,255,0.5); font-size:12px;">{{ call.started_at }} · {{ call.call_status|title }}</small>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    {% if call.duration_seconds > 0 %}
+                    <div style="font-size:13px; color:white;">{{ (call.duration_seconds // 60) }}:{{ "%02d"|format(call.duration_seconds % 60) }}</div>
+                    {% endif %}
+                    <a href="/messages/{{ call.conversation_id }}" style="color:rgba(255,255,255,0.4);"><i class="fas fa-chevron-right"></i></a>
+                </div>
+            </article>
+            {% else %}
+            <div style="padding:40px 20px; text-align:center; color:rgba(255,255,255,0.3);">
+                <i class="fas fa-phone-slash" style="font-size:40px; margin-bottom:12px; display:block;"></i>
+                <p>No recent calls found.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

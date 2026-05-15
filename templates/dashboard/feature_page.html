@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Explore | Chain Premium{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p>FEATURE</p>
+    <h2>{{ title }}</h2>
+</section>
+
+<div class="feature-container" style="max-width: 1000px; margin: auto; padding: 0 24px; text-align: center;">
+    <div class="feed-card" style="padding: 60px; border-radius: 40px; background: radial-gradient(circle at top right, rgba(124,58,237,0.1), transparent);">
+        <div style="font-size: 80px; margin-bottom: 30px;">
+            {% if section == 'favorites' %}❤️
+            {% elif section == 'history' %}🕒
+            {% elif section == 'error' %}⚠️
+            {% else %}✨{% endif %}
+        </div>
+        <h3 style="font-size: 32px; margin-bottom: 15px;">{{ title }}</h3>
+        <p style="color: #bfc0d5; font-size: 18px; line-height: 1.6; max-width: 500px; margin: 0 auto 40px;">{{ message or 'This feature is part of the CHAIN premium ecosystem and is ready to grow with your community.' }}</p>
+        
+        <div style="display: flex; justify-content: center; gap: 15px;">
+            <a href="/" class="primary" style="padding: 15px 40px;">Return Home</a>
+            <a href="/discover/" class="secondary" style="padding: 15px 40px;">Explore More</a>
+        </div>
+    </div>
+</div>
+
+<section class="section-head">
+    <p>PREMIUM</p>
+    <h2>Connected Features</h2>
+</section>
+
+<div class="feature-wall" style="max-width: 1280px; margin: auto; padding: 0 24px;">
+    <div class="feed-card">
+        <b>Live Data</b>
+        <span>Every section is designed to reflect real platform activity as it grows.</span>
+    </div>
+    <div class="feed-card">
+        <b>Premium UI</b>
+        <span>Glassmorphism, dark theme, and mobile-first responsiveness.</span>
+    </div>
+    <div class="feed-card">
+        <b>Live Ready</b>
+        <span>Connect to real live rooms and start your own stream instantly.</span>
+    </div>
+</div>
+{% endblock %}

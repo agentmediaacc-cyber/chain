@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Login | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-auth{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/chain_auth.css">
+{% endblock %}
+
+{% block content %}
+<section class="chain-auth-shell">
+    <div class="chain-auth-card">
+        <div class="chain-auth-head">
+            <p class="chain-auth-eyebrow">CHAIN Sign In</p>
+            <h1>Welcome back.</h1>
+            <p>Sign in to continue your profile, live rooms, stories, gifts, messages and creator momentum.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(category_filter=['oauth_error']) %}
+            {% if messages %}
+                {% for message in messages %}
+                <div class="chain-auth-alert chain-auth-alert--error">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if error %}
+        <div class="chain-auth-alert chain-auth-alert--error">{{ error }}</div>
+        {% endif %}
+
+        <div class="chain-register-step is-active">
+            <span class="chain-auth-step-label">Fast Access</span>
+            <h2>Choose your sign-in path.</h2>
+            <div class="chain-auth-oauth-grid">
+                <a href="/auth/google" class="chain-auth-oauth oauth-trigger" data-loading="Connecting to Google..."><strong>Google</strong><span>Continue with Google</span></a>
+                <a href="/auth/facebook" class="chain-auth-oauth oauth-trigger" data-loading="Connecting to Facebook..."><strong>Facebook</strong><span>Continue with Facebook</span></a>
+                <a href="/auth/register" class="chain-auth-oauth"><strong>Create account</strong><span>Open premium signup</span></a>
+            </div>
+
+            <div style="margin:18px 0 12px;" class="chain-auth-link">Or sign in with your CHAIN account</div>
+
+            <form class="auth-submit-form" method="POST" style="display:grid; gap:16px;">
+                <div class="chain-auth-grid" style="grid-template-columns:1fr;">
+                    <label>
+                        <span>Email or Username</span>
+                        <input type="text" name="login_id" placeholder="Enter your email or username" required>
+                    </label>
+                    <label>
+                        <span>Password</span>
+                        <input type="password" name="password" placeholder="••••••••" required>
+                    </label>
+                </div>
+                <button type="submit" class="primary auth-submit-btn" style="width:100%;">
+                    <span class="btn-label">Log In to CHAIN</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
+            </form>
+        </div>
+
+        <div class="chain-auth-actions">
+            <a href="/auth/forgot-password" class="chain-auth-link">Forgot your password?</a>
+            <div class="chain-auth-actions__right">
+                <a href="/auth/register" class="chain-auth-link">Create account</a>
+                <a href="/admin/login" class="secondary">Admin login</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('.auth-submit-form');
+    const submitBtn = document.querySelector('.auth-submit-btn');
+    const triggers = document.querySelectorAll('.oauth-trigger');
+    form?.addEventListener('submit', () => {
+        if (!submitBtn) return;
+        submitBtn.disabled = true;
+        submitBtn.classList.add('loading');
+    });
+    triggers.forEach(link => {
+        link.addEventListener('click', () => {
+            link.classList.add('loading');
+            link.setAttribute('aria-disabled', 'true');
+            link.style.pointerEvents = 'none';
+        });
+    });
+});
+</script>
+{% endblock %}

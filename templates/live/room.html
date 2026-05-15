@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room.title }} | CHAIN LIVE{% endblock %}
+{% block body_class %}chain-live-active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .live-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 0;
+        height: calc(100vh - 70px);
+        background: #000;
+        overflow: hidden;
+    }
+    .stream-container {
+        position: relative;
+        background: radial-gradient(circle at center, #1a1a3a, #050510);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .floating-ui {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        z-index: 10;
+    }
+    .top-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        pointer-events: auto;
+    }
+    .host-badge {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(10px);
+        padding: 5px 15px 5px 5px;
+        border-radius: 50px;
+        color: white;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .host-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 2px solid var(--premium-accent);
+    }
+    .room-stats {
+        display: flex;
+        gap: 10px;
+    }
+    .stat-pill {
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(10px);
+        padding: 6px 15px;
+        border-radius: 50px;
+        font-size: 12px;
+        font-weight: bold;
+        color: white;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .live-indicator {
+        background: var(--premium-accent);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        margin-right: 8px;
+    }
+    .bottom-ui {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+    .chat-preview {
+        width: 300px;
+        max-height: 200px;
+        overflow-y: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        mask-image: linear-gradient(to top, black 80%, transparent);
+    }
+    .chat-bubble {
+        background: rgba(0,0,0,0.4);
+        backdrop-filter: blur(8px);
+        padding: 8px 15px;
+        border-radius: 15px;
+        color: white;
+        font-size: 13px;
+        width: fit-content;
+        pointer-events: auto;
+    }
+    .reaction-emitter {
+        position: relative;
+        width: 100px;
+        height: 300px;
+        pointer-events: none;
+    }
+    .reaction-float {
+        position: absolute;
+        bottom: 0;
+        font-size: 24px;
+        animation: floatUp 3s ease-out forwards;
+    }
+    @keyframes floatUp {
+        0% { transform: translateY(0) scale(1); opacity: 1; }
+        100% { transform: translateY(-300px) translateX(var(--x-offset)) scale(1.5); opacity: 0; }
+    }
+    .sidebar-panel {
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+    }
+    .gift-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        padding: 20px;
+        background: #fdfafb;
+        border-top: 1px solid #eee;
+    }
+    .gift-btn {
+        background: white;
+        border: 1px solid #eee;
+        border-radius: 12px;
+        padding: 10px 5px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .gift-btn:hover {
+        border-color: var(--premium-accent);
+        transform: translateY(-2px);
+    }
+    .gift-btn span { font-size: 20px; display: block; margin-bottom: 4px; }
+    .gift-btn small { font-size: 10px; font-weight: bold; color: #999; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="live-layout">
+    <div class="stream-container">
+        <!-- The Stream -->
+        {% if room.youtube_embed_url %}
+        <iframe src="{{ room.youtube_embed_url }}?autoplay=1&mute=1&controls=0" style="width:100%; height:100%; border:none;"></iframe>
+        {% else %}
+        <div style="text-align:center; color:white;">
+            <div style="width:120px; height:120px; border-radius:50%; background:var(--premium-gradient); display:flex; align-items:center; justify-content:center; font-size:48px; margin:0 auto 20px; box-shadow:0 0 50px rgba(255,47,125,0.3);">
+                <i class="fas fa-video"></i>
+            </div>
+            <h2>Waiting for host...</h2>
+            <p style="opacity:0.6;">{{ room.welcome_message }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Floating UI Overlays -->
+        <div class="floating-ui">
+            <div class="top-meta">
+                <div class="host-badge">
+                    <img src="{{ room.creator_avatar or '/static/img/default_avatar.png' }}" class="host-avatar">
+                    <div>
+                        <div style="font-weight:bold; font-size:13px;">{{ room.creator_name }}</div>
+                        <div style="font-size:10px; opacity:0.8;"><span class="live-indicator">LIVE</span> {{ room.viewer_count }} watching</div>
+                    </div>
+                    <button style="background:var(--premium-accent); border:none; color:white; padding:5px 12px; border-radius:50px; font-size:11px; margin-left:10px; font-weight:bold; cursor:pointer;">FOLLOW</button>
+                </div>
+                
+                <div class="room-stats">
+                    {% if room.stream_goal_coins > 0 %}
+                    <div class="stat-pill" style="display:flex; align-items:center; gap:8px; width:200px;">
+                        <span style="font-size:10px;">GOAL</span>
+                        <div style="flex:1; height:6px; background:rgba(255,255,255,0.2); border-radius:10px; overflow:hidden;">
+                            <div id="goal-bar" style="width: {{ (room.stream_goal_current / room.stream_goal_coins * 100)|round }}%; height:100%; background:var(--premium-accent);"></div>
+                        </div>
+                        <span style="font-size:10px;">{{ room.stream_goal_current }}/{{ room.stream_goal_coins }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="stat-pill"><i class="fas fa-coins" style="color:#f59e0b; margin-right:5px;"></i> {{ room.total_gift_coins or 0 }}</div>
+                    <button class="stat-pill" style="cursor:pointer;" onclick="toggleFullScreen()"><i class="fas fa-expand"></i></button>
+                </div>
+            </div>
+
+            <div class="bottom-ui">
+                <div class="chat-preview" id="floating-chat">
+                    <div class="chat-bubble"><strong>System:</strong> Welcome to the room! Be respectful.</div>
+                    {% for comment in comments[:5] %}
+                    <div class="chat-bubble"><strong>{{ comment.user_name }}:</strong> {{ comment.body }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="reaction-emitter" id="reaction-container">
+                    <!-- Reactions will float up from here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <aside class="sidebar-panel">
+        <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+            <div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:16px;">Live Chat</h3>
+                <span style="font-size:12px; opacity:0.6;">{{ viewers|length }} online</span>
+            </div>
+            
+            <div style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:12px;">
+                {% for comment in comments %}
+                <div style="display:flex; gap:10px;">
+                    <div style="width:32px; height:32px; border-radius:50%; background:#eee; flex-shrink:0;"></div>
+                    <div>
+                        <strong style="font-size:12px; display:block;">{{ comment.user_name }}</strong>
+                        <p style="font-size:13px; margin:2px 0 0; color:#555;">{{ comment.body }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="padding:15px; border-top:1px solid #eee;">
+                <form id="chat-form" style="display:flex; gap:10px;">
+                    <input type="text" placeholder="Say something..." style="flex:1; padding:10px 15px; border-radius:50px; border:1px solid #eee; outline:none; font-size:14px;">
+                    <button type="submit" style="background:var(--premium-accent); color:white; border:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <div class="gift-grid">
+            {% set gifts = [
+                ('❤️', 'Love', 5), ('🔥', 'Fire', 10), ('👏', 'Clap', 20), ('💎', 'Diamond', 50),
+                ('⭐', 'Star', 100), ('🚀', 'Rocket', 500), ('👑', 'Crown', 1000), ('🎸', 'Rock', 100)
+            ] %}
+            {% for emoji, name, cost in gifts %}
+            <div class="gift-btn" onclick="sendGift('{{ name }}', {{ cost }})">
+                <span>{{ emoji }}</span>
+                <small>{{ cost }}</small>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div style="padding:15px; background:white; border-top:1px solid #eee; display:flex; gap:10px;">
+            <button onclick="emitReaction('❤️')" style="flex:1; height:45px; border-radius:10px; border:1px solid #eee; background:none; font-size:20px; cursor:pointer;">❤️</button>
+            <button onclick="emitReaction('🔥')" style="flex:1; height:45px; border-radius:10px; border:1px solid #eee; background:none; font-size:20px; cursor:pointer;">🔥</button>
+            <button onclick="emitReaction('⭐')" style="flex:1; height:45px; border-radius:10px; border:1px solid #eee; background:none; font-size:20px; cursor:pointer;">⭐</button>
+            <button onclick="emitReaction('👏')" style="flex:1; height:45px; border-radius:10px; border:1px solid #eee; background:none; font-size:20px; cursor:pointer;">👏</button>
+        </div>
+    </aside>
+</div>
+
+<script>
+    function emitReaction(emoji) {
+        const container = document.getElementById('reaction-container');
+        const reaction = document.createElement('div');
+        reaction.className = 'reaction-float';
+        reaction.innerText = emoji;
+        reaction.style.left = Math.random() * 80 + '%';
+        reaction.style.setProperty('--x-offset', (Math.random() - 0.5) * 100 + 'px');
+        
+        container.appendChild(reaction);
+        
+        // Track in backend
+        fetch(`/api/live/{{ room.id }}/react`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({type: emoji})
+        });
+
+        setTimeout(() => reaction.remove(), 3000);
+    }
+
+    function sendGift(name, cost) {
+        if(confirm(`Send ${name} for ${cost} coins?`)) {
+            // Gift logic...
+            emitReaction('🎁');
+        }
+    }
+
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+</script>
+{% endblock %}

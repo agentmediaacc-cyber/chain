@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Audit Log | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-admin{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chain_portal.css">{% endblock %}
+
+{% block content %}
+<section style="max-width: 1180px; margin:0 auto; padding:20px 16px 80px;">
+    <h1 style="margin:0 0 16px;">Audit log</h1>
+    <div style="display:grid; gap:14px;">
+        {% for row in audit_rows %}
+        <article style="padding:18px; border-radius:22px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);">
+            <strong>{{ row.action }}</strong>
+            <div style="color:#cbbecf;">{{ row.target_type }} · {{ row.target_id }} · {{ row.created_at }}</div>
+            {% if row.metadata %}
+            <pre style="margin:10px 0 0; color:#cbbecf; white-space:pre-wrap;">{{ row.metadata }}</pre>
+            {% endif %}
+        </article>
+        {% else %}
+        <div style="padding:20px; border-radius:22px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); color:#cbbecf;">No audit events yet.</div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

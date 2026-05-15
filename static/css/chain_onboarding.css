@@ -1,0 +1,296 @@
+.onboard-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 16px 84px;
+}
+
+.onboard-wizard {
+  display: grid;
+  gap: 18px;
+}
+
+.onboard-head,
+.onboard-step,
+.onboard-actions,
+.onboard-alert {
+  border-radius: 28px;
+  border: 1px solid var(--chain-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 246, 0.92));
+  box-shadow: var(--chain-shadow-lg);
+  backdrop-filter: blur(18px);
+}
+
+.onboard-head,
+.onboard-step,
+.onboard-actions {
+  padding: 22px;
+}
+
+.onboard-eyebrow,
+.onboard-kicker {
+  display: inline-block;
+  margin: 0 0 10px;
+  color: var(--chain-primary);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.onboard-head h1,
+.onboard-step h2 {
+  margin: 0 0 10px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.onboard-head h1 {
+  font-size: clamp(36px, 6vw, 64px);
+}
+
+.onboard-step h2 {
+  font-size: clamp(28px, 4vw, 40px);
+}
+
+.onboard-copy,
+.onboard-step p,
+.choice-card span,
+.foundation-card span,
+.finish-card span {
+  color: var(--chain-muted);
+  line-height: 1.7;
+}
+
+.onboard-progress-wrap {
+  margin-top: 20px;
+}
+
+.onboard-progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.onboard-progress-bar {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(122, 99, 222, 0.08);
+}
+
+.onboard-progress-bar span {
+  display: block;
+  height: 100%;
+  width: 10%;
+  background: linear-gradient(135deg, var(--chain-primary), #f5a36b, var(--chain-secondary));
+}
+
+.onboard-alert {
+  padding: 14px 18px;
+}
+
+.onboard-alert--error {
+  color: #8d433f;
+  background: rgba(201, 92, 86, 0.1);
+}
+
+.onboard-alert--success {
+  color: #176e49;
+  background: rgba(31, 157, 104, 0.1);
+}
+
+.onboard-steps {
+  position: relative;
+}
+
+.onboard-step {
+  display: none;
+}
+
+.onboard-step.is-active {
+  display: block;
+}
+
+.onboard-choice-grid,
+.onboard-field-grid,
+.marketplace-foundation-grid,
+.finish-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.onboard-choice-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 20px;
+}
+
+.onboard-choice-grid--purpose {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.choice-card,
+.choice-chip,
+.foundation-card,
+.finish-card {
+  border: 1px solid var(--chain-border);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--chain-text);
+}
+
+.choice-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  text-align: left;
+}
+
+.choice-card strong,
+.foundation-card strong,
+.finish-card strong {
+  font-size: 18px;
+}
+
+.choice-card.is-selected,
+.choice-chip.is-selected {
+  border-color: rgba(235, 107, 122, 0.32);
+  background: linear-gradient(135deg, rgba(235, 107, 122, 0.16), rgba(122, 99, 222, 0.12));
+  box-shadow: 0 0 0 1px rgba(235, 107, 122, 0.12) inset;
+}
+
+.onboard-field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.onboard-field-grid label {
+  display: grid;
+  gap: 8px;
+}
+
+.onboard-field-grid__full {
+  grid-column: 1 / -1;
+}
+
+.onboard-field-grid span,
+.onboard-chip-section strong {
+  font-weight: 800;
+}
+
+.onboard-field-grid input,
+.onboard-field-grid select,
+.onboard-field-grid textarea {
+  color: var(--chain-text);
+}
+
+.onboard-field-grid textarea {
+  min-height: 120px;
+}
+
+.onboard-chip-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.choice-chip {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.choice-chip--avatar {
+  text-transform: capitalize;
+}
+
+.onboard-toggle-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.onboard-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--chain-border);
+}
+
+.onboard-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.marketplace-foundation-grid,
+.finish-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.foundation-card,
+.finish-card {
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.onboard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: sticky;
+  bottom: 12px;
+  backdrop-filter: blur(18px);
+}
+
+.onboard-actions__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.onboard-soft-link {
+  color: var(--chain-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+#chain-onboard-submit {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .onboard-choice-grid,
+  .onboard-choice-grid--purpose,
+  .onboard-field-grid,
+  .marketplace-foundation-grid,
+  .finish-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .onboard-head,
+  .onboard-step,
+  .onboard-actions {
+    padding: 18px;
+  }
+
+  .onboard-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .onboard-actions__right {
+    justify-content: space-between;
+  }
+}

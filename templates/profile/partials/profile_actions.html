@@ -1,0 +1,35 @@
+{% set own_profile = viewer and profile and viewer.id == profile.id %}
+<section class="profile-action-row">
+    {% if not own_profile %}
+    <div id="follow-container">
+        {% if is_following %}
+        <button class="profile-action-btn subtle" onclick="toggleFollow('{{ profile.id }}', 'unfollow')">
+            <i class="fas fa-user-minus"></i> Unfollow
+        </button>
+        {% else %}
+        <button class="profile-action-btn accent" onclick="toggleFollow('{{ profile.id }}', 'follow')">
+            <i class="fas fa-user-plus"></i> Follow
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% for action in actions %}
+        {% if action.kind == "post" %}
+        <form method="POST" action="{{ action.href }}">
+            <button class="profile-action-btn" type="submit"><i class="fas {{ action.icon }}"></i> {{ action.label }}</button>
+        </form>
+        {% else %}
+        <a class="profile-action-btn {% if 'Video Call' in action.label %}accent{% endif %}" href="{{ action.href }}"><i class="fas {{ action.icon }}"></i> {{ action.label }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if not own_profile %}
+    <form method="POST" action="/profile/@{{ profile.username }}/report">
+        <button class="profile-action-btn subtle" type="submit"><i class="fas fa-flag"></i> Report</button>
+    </form>
+    <form method="POST" action="/profile/@{{ profile.username }}/block">
+        <button class="profile-action-btn subtle" type="submit"><i class="fas fa-ban"></i> Block</button>
+    </form>
+    {% endif %}
+</section>

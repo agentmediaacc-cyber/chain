@@ -1,0 +1,9 @@
+import os
+
+class Config:
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+    SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    APP_BASE_URL = os.getenv("APP_BASE_URL")
+    SLOW_REQUEST_MS = int(os.getenv("SLOW_REQUEST_MS", "1500"))

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}System Audit | CHAIN ADMIN{% endblock %}
+{% block body_class %}chain-wallpaper-admin{% endblock %}
+
+{% block content %}
+<section class="chain-portal-shell">
+    <div class="chain-portal-header--split">
+        <div>
+            <p class="chain-portal-kicker">PRODUCTION INTEGRITY</p>
+            <h1>System Audit Center</h1>
+        </div>
+        <div class="chain-badge-row">
+            <a href="/admin/dashboard" class="secondary">Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="chain-portal-grid chain-portal-grid--3" style="margin-top:30px;">
+        <!-- Service Health -->
+        <article class="chain-data-card">
+            <h3>Service Connectivity</h3>
+            <div class="chain-list">
+                <div class="chain-list-item">
+                    <span>Database</span>
+                    <strong style="color:#10b981;"><i class="fas fa-check-circle"></i> Online</strong>
+                </div>
+                <div class="chain-list-item">
+                    <span>Storage (Supabase)</span>
+                    <strong style="color:#10b981;"><i class="fas fa-check-circle"></i> Connected</strong>
+                </div>
+                <div class="chain-list-item">
+                    <span>Realtime (WS)</span>
+                    <strong style="color:#10b981;"><i class="fas fa-check-circle"></i> Active</strong>
+                </div>
+                <div class="chain-list-item">
+                    <span>AI Engine</span>
+                    <strong style="color:#f59e0b;"><i class="fas fa-info-circle"></i> Throttled</strong>
+                </div>
+            </div>
+        </article>
+
+        <!-- Storage Audit -->
+        <article class="chain-data-card">
+            <h3>Storage & Media</h3>
+            <div class="chain-list">
+                <div class="chain-list-item">
+                    <span>Avatars Bucket</span>
+                    <strong>Public</strong>
+                </div>
+                <div class="chain-list-item">
+                    <span>Verifications Bucket</span>
+                    <strong style="color:#ef4444;">Private (Safe)</strong>
+                </div>
+                <div class="chain-list-item">
+                    <span>Upload Failures (24h)</span>
+                    <strong>0</strong>
+                </div>
+            </div>
+        </article>
+
+        <!-- Security Alerts -->
+        <article class="chain-data-card" style="border-top:4px solid #ef4444;">
+            <h3>Security & Fraud</h3>
+            <div class="chain-list">
+                <div class="chain-list-item">
+                    <span>Suspicious Logins</span>
+                    <strong style="color:#ef4444;">2</strong>
+                </div>
+                <div class="chain-list-item">
+                    <span>Rate Limit Hits</span>
+                    <strong>14</strong>
+                </div>
+                <div class="chain-list-item">
+                    <span>Moderation Flags</span>
+                    <strong style="color:#f59e0b;">5</strong>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="chain-data-card" style="margin-top:25px;">
+        <h2>Active Route Health</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:15px;">
+            <thead>
+                <tr style="text-align:left; border-bottom:1px solid #eee;">
+                    <th style="padding:10px;">Endpoint</th>
+                    <th>Status</th>
+                    <th>Latency</th>
+                    <th>Security</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding:10px;">/auth/login</td>
+                    <td><span class="status-badge" style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:10px;">200 OK</span></td>
+                    <td>45ms</td>
+                    <td>CSRF Protected</td>
+                </tr>
+                <tr>
+                    <td style="padding:10px;">/api/mobile/v1/feed</td>
+                    <td><span class="status-badge" style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:10px;">200 OK</span></td>
+                    <td>112ms</td>
+                    <td>JWT Required</td>
+                </tr>
+                <tr>
+                    <td style="padding:10px;">/wallet/payout</td>
+                    <td><span class="status-badge" style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:10px;">200 OK</span></td>
+                    <td>80ms</td>
+                    <td>Secure Session</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

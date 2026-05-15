@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Withdraw Coins | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-wallet{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/chain_portal.css">{% endblock %}
+
+{% block content %}
+<section class="chain-portal-shell chain-portal-shell--narrow">
+    <form method="POST" class="chain-form-card chain-form-grid">
+        <h1>Withdraw from your wallet</h1>
+        <p class="chain-portal-copy">Withdrawals reduce your available balance immediately and move those coins into pending review until admin approves.</p>
+        <label><span>Coins to withdraw</span><input type="number" min="1" max="{{ wallet.available_balance or wallet.coin_balance or 0 }}" name="coins" required></label>
+        <label><span>Payout method</span>
+            <select name="destination_method">
+                <option value="MTC Maris">MTC Maris</option>
+                <option value="FNB bank transfer">FNB bank transfer</option>
+            </select>
+        </label>
+        <label><span>Account or payout reference</span><input type="text" name="destination_reference" required placeholder="Phone number or bank reference"></label>
+        <button type="submit" class="primary">Submit withdrawal request</button>
+    </form>
+</section>
+{% endblock %}

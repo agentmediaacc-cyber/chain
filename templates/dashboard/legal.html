@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Chain Premium{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/profile_premium.css">
+{% endblock %}
+
+{% block content %}
+<section class="profile-form-shell">
+    <div class="glass-panel">
+        <div class="panel-head">
+            <div>
+                <p>LEGAL</p>
+                <h2>{{ page_title }}</h2>
+            </div>
+        </div>
+        <p style="color:#cbd5e1; line-height:1.8; max-width:760px;">{{ page_intro }}</p>
+        <div class="creator-list" style="margin-top:24px;">
+            <div><strong>Accounts</strong><span>Profiles and authentication data should be accurate and belong to the person using the account.</span></div>
+            <div><strong>Content</strong><span>Posts, live streams, messages, and gifts must respect platform rules and local laws.</span></div>
+            <div><strong>Privacy</strong><span>Profile, wallet, notifications, and interaction data are stored in Supabase according to your deployment settings.</span></div>
+            <div><strong>Safety</strong><span>Report and block tools exist to handle abuse, impersonation, spam, and unsafe behavior.</span></div>
+        </div>
+    </div>
+</section>
+{% endblock %}

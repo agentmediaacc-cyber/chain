@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-auth{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/chain_auth.css">
+{% endblock %}
+
+{% block content %}
+<section class="chain-auth-shell">
+    <form method="POST" class="chain-auth-card" id="chain-register-form" novalidate>
+        <div class="chain-auth-head">
+            <p class="chain-auth-eyebrow">CHAIN Account Creation</p>
+            <h1>Join with intention, not friction.</h1>
+            <p>Create your account first. Your social profile, photo, creator identity and dating setup continue later in onboarding.</p>
+        </div>
+
+        {% if error %}
+        <div class="chain-auth-alert chain-auth-alert--error">{{ error }}</div>
+        {% endif %}
+
+        <div class="chain-auth-progress">
+            <span id="chain-register-progress-text">Step 1 of 4</span>
+            <div><span id="chain-register-progress-bar"></span></div>
+        </div>
+
+        <div class="chain-register-step is-active" data-step="1">
+            <span class="chain-auth-step-label">Step 1</span>
+            <h2>Choose how you want to sign up.</h2>
+            <div class="chain-auth-oauth-grid">
+                <a href="/auth/google" class="chain-auth-oauth chain-auth-oauth--google"><strong>Google</strong><span>Use your Google account</span></a>
+                <a href="/auth/facebook" class="chain-auth-oauth chain-auth-oauth--facebook"><strong>Facebook</strong><span>Use your Facebook account</span></a>
+                <button type="button" class="chain-auth-oauth chain-auth-oauth--email" data-select-signup="email"><strong>Email</strong><span>Create with email and password</span></button>
+            </div>
+            <input type="hidden" name="signup_method" id="signup_method" value="email">
+        </div>
+
+        <div class="chain-register-step" data-step="2">
+            <span class="chain-auth-step-label">Step 2</span>
+            <h2>Set up the core account.</h2>
+            <div class="chain-auth-grid">
+                <label><span>Full name</span><input type="text" name="full_name" required></label>
+                <label>
+                    <span>Username</span>
+                    <input type="text" name="username" id="register_username" minlength="3" maxlength="30" required>
+                    <small class="availability" id="availability_username"></small>
+                    <div class="suggestions" id="suggestions_username"></div>
+                </label>
+                <label>
+                    <span>Email</span>
+                    <input type="email" name="email" id="register_email" required>
+                    <small class="availability" id="availability_email"></small>
+                </label>
+                <label>
+                    <span>Phone number</span>
+                    <input type="text" name="phone" id="register_phone" required>
+                    <small class="availability" id="availability_phone"></small>
+                </label>
+                <label>
+                    <span>Password</span>
+                    <div class="password-row">
+                        <input type="password" name="password" id="register_password" minlength="8" required>
+                        <button type="button" class="toggle-password" data-target="register_password">Show</button>
+                    </div>
+                    <small class="password-strength" id="password_strength">Use at least 8 characters.</small>
+                </label>
+                <label>
+                    <span>Confirm password</span>
+                    <div class="password-row">
+                        <input type="password" name="confirm_password" id="register_confirm_password" minlength="8" required>
+                        <button type="button" class="toggle-password" data-target="register_confirm_password">Show</button>
+                    </div>
+                    <small class="availability" id="confirm_password_status"></small>
+                </label>
+                <label><span>Country origin</span><select name="country_origin" id="register_country" required></select></label>
+                <label><span>Region / State</span><select name="region" id="register_region"></select></label>
+                <label class="full"><span>Town / City</span><input type="text" name="town" id="register_town" required></label>
+            </div>
+        </div>
+
+        <div class="chain-register-step" data-step="3">
+            <span class="chain-auth-step-label">Step 3</span>
+            <h2>Choose your purpose.</h2>
+            <div class="chain-chip-grid" data-single-target="profile_type">
+                <button type="button" class="chain-chip is-selected" data-value="member">Member</button>
+                <button type="button" class="chain-chip" data-value="creator">Creator</button>
+                <button type="button" class="chain-chip" data-value="seller">Seller</button>
+            </div>
+            <input type="hidden" name="profile_type" id="profile_type" value="member">
+
+            <div class="chain-toggle-list">
+                <label class="chain-toggle"><input type="checkbox" name="dating_mode_enabled"> <span>Dating opt-in</span></label>
+                <label class="chain-toggle"><input type="checkbox" name="premium_mode_enabled"> <span>Premium interest</span></label>
+            </div>
+        </div>
+
+        <div class="chain-register-step" data-step="4">
+            <span class="chain-auth-step-label">Step 4</span>
+            <h2>Confirm and continue.</h2>
+            <div class="chain-toggle-list">
+                <label class="chain-toggle"><input type="checkbox" name="human_confirmed" id="human_confirmed" required> <span>I am a real person creating my own account.</span></label>
+                <label class="chain-toggle"><input type="checkbox" name="terms" id="terms" required> <span>I agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.</span></label>
+            </div>
+        </div>
+
+        <div class="chain-auth-actions">
+            <button type="button" class="secondary" id="register_prev">Back</button>
+            <div class="chain-auth-actions__right">
+                <a href="/auth/login" class="chain-auth-link">Already have an account?</a>
+                <button type="button" class="primary" id="register_next">Next</button>
+                <button type="submit" class="primary" id="register_submit" disabled>Create Account</button>
+            </div>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/chain_locations.js"></script>
+<script src="/static/js/chain_register.js"></script>
+{% endblock %}

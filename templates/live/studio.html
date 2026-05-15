@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Creator Studio | CHAIN{% endblock %}
+
+{% block extra_css %}
+<style>
+    .studio-shell {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 30px 20px 120px;
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 30px;
+    }
+    .preview-stage {
+        background: #000;
+        border-radius: 24px;
+        position: relative;
+        aspect-ratio: 16/9;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+    .stage-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 20px;
+        pointer-events: none;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.6) 100%);
+    }
+    .glass-control {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 15px;
+        color: white;
+        pointer-events: auto;
+    }
+    .media-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,0.1);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .media-btn.active {
+        background: var(--premium-accent);
+        box-shadow: 0 0 15px var(--premium-accent);
+    }
+    .control-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .setup-card {
+        background: white;
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        font-size: 12px;
+        font-weight: bold;
+        color: #999;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+        width: 100%;
+        padding: 12px 15px;
+        border-radius: 12px;
+        border: 1px solid #eee;
+        outline: none;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+    }
+    .form-group input:focus { border-color: var(--premium-accent); }
+    
+    .quality-selector {
+        display: flex;
+        gap: 5px;
+        background: #f5f5f5;
+        padding: 5px;
+        border-radius: 10px;
+    }
+    .quality-chip {
+        flex: 1;
+        text-align: center;
+        padding: 5px;
+        font-size: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 6px;
+    }
+    .quality-chip.active {
+        background: white;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        color: var(--premium-accent);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="studio-shell">
+    <div class="main-studio">
+        <div class="preview-stage">
+            <video id="studio-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover;"></video>
+            
+            <div class="stage-overlay">
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div class="glass-control" style="padding: 8px 15px; font-size:12px; font-weight:bold;">
+                        <i class="fas fa-signal" style="color:#10b981; margin-right:5px;"></i> BITRATE: 4500kbps
+                    </div>
+                    <div class="glass-control" style="display:flex; gap:10px;">
+                        <button class="media-btn active" title="Toggle Mic"><i class="fas fa-microphone"></i></button>
+                        <button class="media-btn active" title="Toggle Camera"><i class="fas fa-video"></i></button>
+                        <button class="media-btn" title="Beauty Mode"><i class="fas fa-magic"></i></button>
+                        <button class="media-btn" title="Background Blur"><i class="fas fa-ghost"></i></button>
+                    </div>
+                </div>
+                
+                <div style="display:flex; justify-content:center; gap:20px; padding-bottom:10px;">
+                    <div class="glass-control control-row">
+                        <i class="fas fa-camera"></i>
+                        <select style="background:none; border:none; color:white; font-size:12px; outline:none;">
+                            <option>Default Camera</option>
+                            <option>USB Video Device</option>
+                        </select>
+                    </div>
+                    <div class="glass-control control-row">
+                        <i class="fas fa-microphone-alt"></i>
+                        <select style="background:none; border:none; color:white; font-size:12px; outline:none;">
+                            <option>Built-in Microphone</option>
+                            <option>Pro Audio Interface</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px;">
+            <div class="glass-panel" style="padding:20px; background:white;">
+                <h4 style="margin:0 0 10px; font-size:13px; color:#999;">STREAM QUALITY</h4>
+                <div class="quality-selector">
+                    <div class="quality-chip">480p</div>
+                    <div class="quality-chip active">720p</div>
+                    <div class="quality-chip">1080p</div>
+                    <div class="quality-chip">4K</div>
+                </div>
+            </div>
+            <div class="glass-panel" style="padding:20px; background:white;">
+                <h4 style="margin:0 0 10px; font-size:13px; color:#999;">CO-HOSTS</h4>
+                <button class="secondary" style="width:100%; font-size:12px;"><i class="fas fa-user-plus"></i> Invite Guest</button>
+            </div>
+            <div class="glass-panel" style="padding:20px; background:white;">
+                <h4 style="margin:0 0 10px; font-size:13px; color:#999;">STREAM ORIENTATION</h4>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-sm active" style="flex:1;"><i class="fas fa-mobile-alt"></i> Portrait</button>
+                    <button class="btn-sm" style="flex:1;"><i class="fas fa-desktop"></i> Landscape</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <aside class="studio-sidebar">
+        <form method="POST" enctype="multipart/form-data" class="setup-card">
+            <h2 style="margin:0 0 25px;">Go Live Setup</h2>
+            
+            <div class="form-group">
+                <label>Stream Title</label>
+                <input name="title" required placeholder="Enter a catchy title...">
+            </div>
+
+            <div class="form-group">
+                <label>Category</label>
+                <select name="category">
+                    <option>Live Music</option>
+                    <option>Dating & Social</option>
+                    <option>Deep Talk</option>
+                    <option>Creators Hub</option>
+                    <option>Entertainment</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Access Type</label>
+                <div style="display:flex; gap:10px;">
+                    <label style="flex:1; cursor:pointer;">
+                        <input type="radio" name="access_type" value="public" checked style="display:none;">
+                        <div class="access-box" style="padding:10px; border:1px solid #eee; border-radius:10px; text-align:center; font-size:11px;">Public</div>
+                    </label>
+                    <label style="flex:1; cursor:pointer;">
+                        <input type="radio" name="access_type" value="premium" style="display:none;">
+                        <div class="access-box" style="padding:10px; border:1px solid #eee; border-radius:10px; text-align:center; font-size:11px;">Premium</div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Entry Fee (Coins)</label>
+                <input type="number" name="entry_fee" value="0">
+            </div>
+
+            <div class="form-group">
+                <label>Schedule Live</label>
+                <input type="datetime-local" name="scheduled_at">
+            </div>
+
+            <div class="form-group">
+                <label>Cover Photo</label>
+                <input type="file" name="cover" accept="image/*">
+            </div>
+
+            <button type="submit" class="primary" style="width:100%; padding:18px; font-size:16px; border-radius:15px; margin-top:10px; background:var(--premium-gradient);">
+                START PREMIUM LIVE
+            </button>
+        </form>
+    </aside>
+</div>
+
+<script>
+    // Minimal camera preview for now
+    async function initPreview() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('studio-video').srcObject = stream;
+        } catch (e) {
+            console.error('Camera access denied:', e);
+        }
+    }
+    initPreview();
+</script>
+{% endblock %}

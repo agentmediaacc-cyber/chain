@@ -1,0 +1,208 @@
+.chain-portal-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 88px;
+}
+
+.chain-portal-shell--narrow {
+  max-width: 760px;
+}
+
+.chain-portal-shell--auth {
+  max-width: 540px;
+}
+
+.chain-portal-header,
+.chain-portal-row,
+.chain-portal-grid,
+.chain-form-grid,
+.chain-data-grid,
+.chain-action-row {
+  display: grid;
+  gap: 16px;
+}
+
+.chain-portal-header--split {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.chain-portal-hero,
+.chain-data-card,
+.chain-form-card,
+.chain-admin-card {
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,247,245,.92));
+  border: 1px solid var(--chain-border);
+  border-radius: var(--chain-radius-lg);
+  box-shadow: var(--chain-shadow-md);
+}
+
+.chain-portal-hero h1,
+.chain-form-card h1,
+.chain-form-card h2,
+.chain-admin-card h1,
+.chain-admin-card h2,
+.chain-data-card h2 {
+  margin: 0 0 10px;
+  line-height: 1.02;
+  letter-spacing: -.03em;
+}
+
+.chain-portal-kicker {
+  margin: 0 0 8px;
+  color: var(--chain-primary);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.chain-portal-copy,
+.chain-data-card p,
+.chain-form-card p,
+.chain-admin-card p,
+.chain-help {
+  color: var(--chain-muted);
+}
+
+.chain-portal-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chain-portal-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.chain-portal-grid--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.chain-form-grid label {
+  display: grid;
+  gap: 8px;
+}
+
+.chain-form-grid label span,
+.chain-form-grid strong {
+  font-weight: 800;
+}
+
+.chain-form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.chain-stat-card strong {
+  display: block;
+  font-size: 30px;
+  margin-bottom: 6px;
+}
+
+.chain-list {
+  display: grid;
+  gap: 12px;
+}
+
+.chain-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  border-top: 1px solid rgba(109, 97, 120, 0.12);
+}
+
+.chain-list-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.chain-badge-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chain-filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.chain-filter-bar select,
+.chain-filter-bar input {
+  width: auto;
+  min-width: 180px;
+}
+
+.chain-wallet-balance {
+  display: grid;
+  gap: 12px;
+}
+
+.chain-wallet-balance strong {
+  font-size: 34px;
+}
+
+.chain-rate-card {
+  background: linear-gradient(135deg, rgba(214,168,91,.16), rgba(255,255,255,.72));
+}
+
+.chain-marketplace-card {
+  display: block;
+}
+
+.chain-marketplace-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(235,107,122,.12), rgba(122,99,222,.12));
+}
+
+.chain-marketplace-thumb--blur {
+  filter: blur(6px);
+}
+
+.chain-admin-metrics .chain-data-card {
+  min-height: 140px;
+}
+
+.chain-table-card pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 920px) {
+  .chain-portal-grid--4,
+  .chain-portal-grid--3,
+  .chain-portal-grid--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .chain-portal-shell {
+    padding: 20px 14px 90px;
+  }
+
+  .chain-portal-grid--4,
+  .chain-portal-grid--3,
+  .chain-portal-grid--2 {
+    grid-template-columns: 1fr;
+  }
+
+  .chain-portal-hero,
+  .chain-data-card,
+  .chain-form-card,
+  .chain-admin-card {
+    padding: 20px;
+  }
+}

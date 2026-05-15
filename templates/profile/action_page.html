@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+  <title>{{ title }} | Chain</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+</head>
+<body>
+  <main class="empty-profile">
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    {% if profile %}
+      <a href="/profile/@{{ profile.username }}">Back to Profile</a>
+    {% else %}
+      <a href="/">Back Home</a>
+    {% endif %}
+  </main>
+</body>
+</html>
