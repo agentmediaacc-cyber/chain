@@ -1,224 +1,451 @@
 {% extends "base.html" %}
 
-{% block title %}CHAIN | Real-time Social Experience{% endblock %}
-{% block body_class %}chain-home-page chain-wallpaper-premium{% endblock %}
+{% block title %}CHAIN | Home{% endblock %}
+{% block body_class %}chain-home-page{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/chain_home.css">
-<style>
-    :root {
-        --premium-bg: #fdfafb;
-        --premium-accent: #ff2f7d;
-        --premium-gradient: linear-gradient(135deg, #ff2f7d 0%, #7c3aed 100%);
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.2);
-    }
-    .story-rail {
-        display: flex;
-        gap: 15px;
-        overflow-x: auto;
-        padding: 20px 0;
-        scrollbar-width: none;
-    }
-    .story-card {
-        flex: 0 0 80px;
-        text-align: center;
-        cursor: pointer;
-    }
-    .story-ring {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        padding: 3px;
-        background: var(--premium-gradient);
-        display: inline-block;
-        margin-bottom: 5px;
-    }
-    .story-avatar {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        border: 2px solid white;
-        object-fit: cover;
-        background: #eee;
-    }
-    .story-name {
-        font-size: 11px;
-        font-weight: 500;
-        color: #333;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: block;
-    }
-    .live-badge {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: #ff2f7d;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: bold;
-        z-index: 2;
-    }
-    .viewer-count {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: rgba(0,0,0,0.5);
-        color: white;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 10px;
-        z-index: 2;
-        backdrop-filter: blur(4px);
-    }
-    .floating-live-btn {
-        position: fixed;
-        bottom: 90px;
-        right: 20px;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: var(--premium-gradient);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        box-shadow: 0 8px 25px rgba(255, 47, 125, 0.4);
-        z-index: 100;
-        text-decoration: none;
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    .floating-live-btn:hover {
-        transform: scale(1.1) rotate(5deg);
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="chain-home-container" style="max-width: 600px; margin: 0 auto; padding-bottom: 100px;">
-    
-    <!-- Story Rail -->
-    <div class="story-rail">
-        <div class="story-card">
-            <div class="story-ring" style="background: #eee;">
-                <div style="width:100%; height:100%; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; background:#fff; color:var(--premium-accent); font-size:24px;">+</div>
-            </div>
-            <span class="story-name">Your Story</span>
-        </div>
-        {% for story in stories %}
-        <a href="/status/{{ story.id }}" class="story-card" style="text-decoration:none;">
-            <div class="story-ring">
-                {% if story.avatar_url %}
-                <img src="{{ story.avatar_url }}" class="story-avatar">
-                {% else %}
-                <div class="story-avatar" style="display:flex; align-items:center; justify-content:center; background:#fff; font-weight:bold; color:var(--premium-accent);">{{ story.display_name[:1] }}</div>
-                {% endif %}
-            </div>
-            <span class="story-name">{{ story.display_name }}</span>
-        </a>
-        {% endfor %}
-    </div>
+<div class="chain-home">
+    {% set is_logged_in = current is not none %}
+    {% set home_route = safe_link('home', is_logged_in) %}
+    {% set discover_route = safe_link('discover', is_logged_in) %}
+    {% set live_route = safe_link('live', is_logged_in) %}
+    {% set drawer_profile = safe_link('profile', is_logged_in) %}
+    {% set drawer_wallet = safe_link('wallet', is_logged_in) %}
+    {% set drawer_messages = safe_link('messages', is_logged_in) %}
+    {% set drawer_notifications = safe_link('notifications', is_logged_in) %}
+    {% set drawer_settings = safe_link('settings', is_logged_in) %}
+    {% set login_route = safe_link('login', is_logged_in) %}
+    {% set register_route = safe_link('register', is_logged_in) %}
+    {% set composer_fallback = safe_link('create_post', is_logged_in) %}
+    {% set story_create = safe_link('create_story', is_logged_in) %}
+    {% set live_create = safe_link('go_live', is_logged_in) %}
+    {% set reel_route = safe_link('reels', is_logged_in) %}
+    {% set upload_video_route = safe_link('upload_video', is_logged_in) %}
+    {% set friends_route = safe_link('friends', is_logged_in) %}
+    {% set dating_route = safe_link('dating', is_logged_in) %}
 
-    <!-- Personalized Feed -->
-    <div class="main-feed" style="display:flex; flex-direction:column; gap:20px;">
-        {% for item in feed %}
-            {% if item.type == 'live_room' %}
-            <a href="/live/room/{{ item.data.id }}" class="feed-item" style="text-decoration:none; color:inherit; display:block; position:relative; border-radius:20px; overflow:hidden; background:#000; aspect-ratio: 9/12;">
-                <div class="live-badge"><i class="fas fa-circle" style="font-size:8px; margin-right:4px;"></i> LIVE</div>
-                <div class="viewer-count"><i class="fas fa-eye" style="margin-right:4px;"></i> {{ item.data.viewer_count }}</div>
-                {% if item.data.cover_url %}
-                <img src="{{ item.data.cover_url }}" style="width:100%; height:100%; object-fit:cover; opacity:0.8;">
+    <header class="chain-home__app-header">
+        <div class="chain-home__header-left">
+            <button type="button" class="chain-home__menu-btn" data-drawer-toggle aria-label="Open menu" aria-expanded="false" aria-controls="chain-home-drawer">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="{{ home_route }}" class="chain-home__brand" aria-label="CHAIN home">
+                <span>CHAIN</span>
+                <strong>CHAIN</strong>
+            </a>
+        </div>
+
+        <form class="chain-home__top-search" action="/search" method="get" autocomplete="off">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="text" name="q" placeholder="Search creators, live rooms, hashtags, towns…" aria-label="Search creators, live rooms, hashtags, towns">
+        </form>
+
+        <div class="chain-home__header-actions">
+            <a href="/search" class="chain-home__icon-btn chain-home__icon-btn--mobile" aria-label="Search"><i class="fas fa-search"></i></a>
+            <a href="{{ drawer_notifications }}" class="chain-home__icon-btn" aria-label="Notifications"><i class="fas fa-bell"></i></a>
+            <a href="{{ drawer_messages }}" class="chain-home__icon-btn" aria-label="Messages"><i class="fas fa-comment"></i></a>
+            <a href="{{ drawer_wallet }}" class="chain-home__icon-btn" aria-label="Wallet"><i class="fas fa-coins"></i></a>
+            {% if is_logged_in %}
+            <a href="/profile/" class="chain-home__profile-btn" aria-label="Open profile">
+                {% if current.avatar_url %}
+                <img src="{{ current.avatar_url }}" alt="Profile">
+                {% else %}
+                <span>{{ (current.full_name or current.username or 'P')[:1] }}</span>
                 {% endif %}
-                <div style="position:absolute; bottom:0; left:0; right:0; padding:20px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); color:white;">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                        <div style="width:32px; height:32px; border-radius:50%; border:2px solid var(--premium-accent); overflow:hidden;">
-                            {% if item.data.creator_avatar %}<img src="{{ item.data.creator_avatar }}" style="width:100%; height:100%; object-fit:cover;">{% endif %}
-                        </div>
-                        <strong style="font-size:14px;">{{ item.data.creator_name }}</strong>
-                    </div>
-                    <h3 style="font-size:18px; margin:0; line-height:1.2;">{{ item.data.title }}</h3>
-                    <div style="margin-top:8px; display:flex; gap:8px;">
-                        <span style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:4px; font-size:11px;">#{{ item.data.category }}</span>
-                    </div>
+            </a>
+            {% else %}
+            <a href="{{ login_route }}" class="chain-home__login-btn">Login</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="chain-home__drawer-backdrop" data-drawer-close hidden></div>
+    <aside id="chain-home-drawer" class="chain-home__drawer" aria-hidden="true">
+        <div class="chain-home__drawer-head">
+            <strong>CHAIN</strong>
+            <button type="button" class="chain-home__drawer-close" data-drawer-close aria-label="Close menu">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="chain-home__drawer-nav">
+            <a href="{{ home_route }}">Home</a>
+            <a href="{{ discover_route }}">Discover</a>
+            <a href="{{ live_route }}">Live</a>
+            <a href="{{ drawer_messages }}">Messages</a>
+            <a href="{{ drawer_wallet }}">Wallet</a>
+            <a href="{{ drawer_profile }}">Profile</a>
+            <a href="{{ drawer_settings }}">Settings</a>
+            <a href="{{ discover_route }}">Help</a>
+        </nav>
+    </aside>
+
+    <div class="chain-home__desktop-layout">
+        <aside class="chain-home__desktop-sidebar chain-home__desktop-sidebar--left">
+            {% if is_logged_in %}
+            <a href="/profile/" class="chain-home__side-profile chain-card">
+                <span class="chain-home__avatar chain-home__avatar--lg">
+                    {% if current.avatar_url %}
+                    <img src="{{ current.avatar_url }}" alt="Your profile">
+                    {% else %}
+                    {{ (current.full_name or current.username or 'P')[:1] }}
+                    {% endif %}
+                </span>
+                <div>
+                    <strong>{{ current.full_name or current.username or 'Your profile' }}</strong>
+                    <p>Open profile</p>
                 </div>
             </a>
-            {% elif item.type == 'post' %}
-            <div class="feed-item" style="background:white; border-radius:20px; padding:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <a href="/profile/@{{ item.data.username }}" style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
-                        <div style="width:40px; height:40px; border-radius:50%; background:#eee; overflow:hidden;">
-                            {% if item.data.avatar_url %}<img src="{{ item.data.avatar_url }}" style="width:100%; height:100%; object-fit:cover;">{% endif %}
-                        </div>
-                        <div>
-                            <strong style="display:block; font-size:14px;">{{ item.data.display_name }}</strong>
-                            <small style="opacity:0.6; font-size:11px;">{{ item.data.created_label }}</small>
-                        </div>
-                    </a>
-                    <button style="background:none; border:none; color:#999;"><i class="fas fa-ellipsis-h"></i></button>
-                </div>
-                
-                <p style="font-size:15px; line-height:1.5; margin-bottom:12px;">{{ item.data.caption }}</p>
-                
-                {% if item.data.media_url %}
-                <div style="border-radius:15px; overflow:hidden; margin-bottom:12px; background:#f5f5f5;">
-                    <img src="{{ item.data.media_url }}" style="width:100%; display:block;" loading="lazy">
-                </div>
-                {% endif %}
-                
-                <div style="display:flex; gap:20px; border-top:1px solid #f0f0f0; padding-top:12px;">
-                    <button style="background:none; border:none; display:flex; align-items:center; gap:6px; color:#555;"><i class="far fa-heart"></i> <small>{{ item.data.likes_count }}</small></button>
-                    <button style="background:none; border:none; display:flex; align-items:center; gap:6px; color:#555;"><i class="far fa-comment"></i> <small>{{ item.data.comments_count }}</small></button>
-                    <button style="background:none; border:none; display:flex; align-items:center; gap:6px; color:#555; margin-left:auto;"><i class="far fa-bookmark"></i></button>
-                </div>
-            </div>
-            {% elif item.type == 'marketplace_item' %}
-            <div class="feed-item" style="background:var(--premium-gradient); border-radius:20px; padding:2px;">
-                <div style="background:white; border-radius:18px; padding:15px;">
-                    <span style="background:var(--premium-accent); color:white; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:bold; margin-bottom:10px; display:inline-block;">MARKETPLACE</span>
-                    <div style="display:flex; gap:15px; align-items:center;">
-                        <div style="width:80px; height:80px; border-radius:12px; overflow:hidden; background:#eee;">
-                            {% if item.data.cover_url %}<img src="{{ item.data.cover_url }}" style="width:100%; height:100%; object-fit:cover;">{% endif %}
-                        </div>
-                        <div style="flex:1;">
-                            <h4 style="margin:0 0 4px; font-size:16px;">{{ item.data.title }}</h4>
-                            <p style="font-size:12px; opacity:0.7; margin:0 0 10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ item.data.description }}</p>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="color:var(--premium-accent);">{{ item.data.price_coins }} coins</strong>
-                                <a href="/marketplace/item/{{ item.data.id }}" class="btn-sm" style="background:var(--premium-accent); color:white; text-decoration:none; padding:4px 12px; border-radius:50px; font-size:12px;">View</a>
-                            </div>
-                        </div>
-                    </div>
+            {% else %}
+            <div class="chain-home__side-login chain-card">
+                <h3>Log in to unlock CHAIN</h3>
+                <p>Jump into live rooms, messages, creator tools and your profile.</p>
+                <div class="chain-home__creator-actions">
+                <a href="{{ login_route }}" class="chain-btn chain-btn-primary">Log in</a>
+                <a href="{{ register_route }}" class="chain-btn chain-btn-secondary">Create account</a>
                 </div>
             </div>
             {% endif %}
-        {% endfor %}
-    </div>
-    
-    <!-- Floating Live Button -->
-    <a href="/live/studio" class="floating-live-btn">
-        <i class="fas fa-video"></i>
-    </a>
 
-    <!-- Mobile Navigation -->
-    <nav class="chain-home__mobile-nav" aria-label="Mobile navigation" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #eee;">
-        <a href="/" class="is-active"><i class="fas fa-home"></i><small>Home</small></a>
-        <a href="/discover/"><i class="fas fa-search"></i><small>Search</small></a>
-        <a href="/live/studio" style="color: var(--premium-accent); font-size: 24px;"><i class="fas fa-plus-circle"></i></a>
-        <a href="/messages/"><i class="fas fa-comment"></i><small>Chat</small></a>
-        <a href="/profile/"><i class="fas fa-user"></i><small>Profile</small></a>
+            <nav class="chain-home__desktop-nav chain-card">
+                <a href="{{ home_route }}" class="is-active"><i class="fas fa-home"></i><span>Home</span></a>
+                <a href="{{ discover_route }}"><i class="fas fa-compass"></i><span>Discover</span></a>
+                <a href="{{ live_route }}"><i class="fas fa-video"></i><span>Live Rooms</span></a>
+                <a href="{{ friends_route }}"><i class="fas fa-user-friends"></i><span>Friends</span></a>
+                <a href="{{ reel_route }}"><i class="fas fa-film"></i><span>Reels</span></a>
+                <a href="{{ drawer_messages }}"><i class="fas fa-comment"></i><span>Messages</span></a>
+                <a href="{{ drawer_wallet }}"><i class="fas fa-wallet"></i><span>Wallet</span></a>
+                <a href="{{ dating_route }}"><i class="fas fa-heart"></i><span>Dating</span></a>
+                <a href="{{ drawer_notifications }}"><i class="fas fa-bell"></i><span>Notifications</span></a>
+                <a href="{{ drawer_settings }}"><i class="fas fa-cog"></i><span>Settings</span></a>
+            </nav>
+        </aside>
+
+        <main class="chain-home__feed">
+            <section class="chain-home__composer chain-card">
+                <div class="chain-home__composer-top">
+                    <span class="chain-home__avatar chain-home__avatar--composer">
+                        {% if is_logged_in and current.avatar_url %}
+                        <img src="{{ current.avatar_url }}" alt="Your avatar">
+                        {% else %}
+                        <span>{{ (current.full_name or current.username or 'C')[:1] if is_logged_in else 'C' }}</span>
+                        {% endif %}
+                    </span>
+                    <a href="{{ composer_fallback }}" class="chain-home__composer-input">What's happening on CHAIN?</a>
+                </div>
+                <div class="chain-home__composer-actions">
+                    <a href="{{ composer_fallback }}" class="chain-home__action-chip">Post</a>
+                    <a href="{{ story_create }}" class="chain-home__action-chip">Story</a>
+                    <a href="{{ safe_link('upload_reel', is_logged_in) }}" class="chain-home__action-chip">Reel</a>
+                    <a href="{{ live_create }}" class="chain-home__action-chip">Go Live</a>
+                    <a href="{{ upload_video_route }}" class="chain-home__action-chip">Upload Video</a>
+                </div>
+            </section>
+
+            <section class="chain-home__section chain-home__section--tight">
+                <div class="chain-home__section-head chain-home__section-head--compact">
+                    <div>
+                        <p class="chain-home__kicker">Stories</p>
+                    </div>
+                </div>
+                <div class="chain-home__story-row">
+                    {% if is_logged_in %}
+                    <a href="/status/create" class="chain-home__story-card chain-home__story-card--create">
+                        <span class="chain-home__story-ring">
+                            {% if current.avatar_url %}
+                            <img src="{{ current.avatar_url }}" alt="Your Story">
+                            {% else %}
+                            <span>{{ (current.full_name or current.username or 'Y')[:1] }}</span>
+                            {% endif %}
+                        </span>
+                        <strong>Your Story</strong>
+                    </a>
+                    {% endif %}
+
+                    {% for story in stories %}
+                    <a href="/status/{{ story.id }}" class="chain-home__story-card">
+                        <span class="chain-home__story-ring">
+                            {% if story.avatar_url %}
+                            <img src="{{ story.avatar_url }}" alt="{{ story.display_name }}">
+                            {% else %}
+                            <span>{{ (story.display_name or '?')[:1] }}</span>
+                            {% endif %}
+                        </span>
+                        {% if story.display_name %}<strong>{{ story.display_name }}</strong>{% endif %}
+                        <small>{{ story.created_label }}</small>
+                    </a>
+                    {% endfor %}
+
+                    {% if not stories %}
+                    <div class="chain-home__empty-card chain-home__empty-card--wide">
+                        <h3>No stories yet. Share the first moment.</h3>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="chain-home__section chain-home__section--tight chain-home__mobile-only">
+                <div class="chain-home__quick-grid">
+                    <a href="{{ friends_route }}" class="chain-home__quick-card chain-card"><i class="fas fa-user-friends"></i><span>Friends</span></a>
+                    <a href="{{ discover_route }}" class="chain-home__quick-card chain-card"><i class="fas fa-compass"></i><span>Discover</span></a>
+                    <a href="{{ live_route }}" class="chain-home__quick-card chain-card"><i class="fas fa-video"></i><span>Live Rooms</span></a>
+                    <a href="{{ reel_route }}" class="chain-home__quick-card chain-card"><i class="fas fa-film"></i><span>Reels</span></a>
+                    <a href="{{ drawer_messages }}" class="chain-home__quick-card chain-card"><i class="fas fa-comment"></i><span>Messages</span></a>
+                    <a href="{{ drawer_wallet }}" class="chain-home__quick-card chain-card"><i class="fas fa-wallet"></i><span>Wallet</span></a>
+                    <a href="{{ dating_route }}" class="chain-home__quick-card chain-card"><i class="fas fa-heart"></i><span>Dating</span></a>
+                    <a href="{{ drawer_notifications }}" class="chain-home__quick-card chain-card"><i class="fas fa-bell"></i><span>Notifications</span></a>
+                </div>
+            </section>
+
+            <section class="chain-home__section">
+                <div class="chain-home__section-head">
+                    <div>
+                        <p class="chain-home__kicker">Live Now</p>
+                        <h2>Live Rooms</h2>
+                    </div>
+                    <a href="{{ live_route }}" class="chain-home__section-link">Open live</a>
+                </div>
+                <div class="chain-home__grid chain-home__grid--live">
+                    {% for room in live_rooms %}
+                    <a href="{{ room.watch_url }}" class="chain-home__live-card chain-clickable-card chain-card">
+                        <div class="chain-home__live-media">
+                            {% if room.cover_url %}
+                            <img src="{{ room.cover_url }}" alt="{{ room.title }}">
+                            {% else %}
+                            <div class="chain-home__live-cover-fallback">{{ (room.title or '?')[:1] }}</div>
+                            {% endif %}
+                            <span class="chain-home__live-badge">LIVE</span>
+                            {% if room.viewer_count is not none %}
+                            <span class="chain-home__viewer-badge">{{ room.viewer_count }} watching</span>
+                            {% endif %}
+                        </div>
+                        <div class="chain-home__card-body">
+                            <div class="chain-home__person">
+                                <span class="chain-home__avatar">
+                                    {% if room.creator_avatar %}
+                                    <img src="{{ room.creator_avatar }}" alt="{{ room.creator_name }}">
+                                    {% elif room.creator_name %}
+                                    {{ room.creator_name[:1] }}
+                                    {% endif %}
+                                </span>
+                                <div>
+                                    {% if room.creator_name %}<strong>{{ room.creator_name }}</strong>{% endif %}
+                                    {% if room.creator_location %}<small>{{ room.creator_location }}</small>{% endif %}
+                                </div>
+                            </div>
+                            {% if room.title %}<h3>{{ room.title }}</h3>{% endif %}
+                            <div class="chain-home__meta-row">
+                                {% if room.category %}<span class="chain-pill">{{ room.category }}</span>{% endif %}
+                                {% if room.entry_fee_label %}<span class="chain-pill">{{ room.entry_fee_label }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                    {% if not live_rooms %}
+                    <div class="chain-home__empty-card">
+                        <h3>No live rooms yet. Start the first live.</h3>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="chain-home__section">
+                <div class="chain-home__section-head">
+                    <div>
+                        <p class="chain-home__kicker">Trending Posts</p>
+                        <h2>Trending Posts</h2>
+                    </div>
+                </div>
+                <div class="chain-home__stack">
+                    {% for post in trending_posts %}
+                    <article class="chain-home__post-card chain-card">
+                        <div class="chain-home__person">
+                            <a href="{{ post.profile_url }}" class="chain-home__person-link">
+                                <span class="chain-home__avatar">
+                                    {% if post.avatar_url %}
+                                    <img src="{{ post.avatar_url }}" alt="{{ post.display_name }}">
+                                    {% elif post.display_name %}
+                                    {{ post.display_name[:1] }}
+                                    {% endif %}
+                                </span>
+                                <div>
+                                    {% if post.display_name %}<strong>{{ post.display_name }}</strong>{% endif %}
+                                    <small>{{ post.created_label }}</small>
+                                </div>
+                            </a>
+                            {% if post.category %}<span class="chain-pill">{{ post.category }}</span>{% endif %}
+                        </div>
+                        <p>{{ post.excerpt }}</p>
+                        {% if post.media_url %}
+                        <div class="chain-home__post-media">
+                            <img src="{{ post.media_url }}" alt="{{ post.display_name }} post">
+                        </div>
+                        {% endif %}
+                        <div class="chain-home__meta-row">
+                            <span>{{ post.likes_count }} likes</span>
+                            <span>{{ post.comments_count }} comments</span>
+                        </div>
+                    </article>
+                    {% endfor %}
+                    {% if not trending_posts %}
+                    <div class="chain-home__empty-card">
+                        <h3>No posts yet. Share the first update.</h3>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="chain-home__section">
+                <div class="chain-home__section-head">
+                    <div>
+                        <p class="chain-home__kicker">Recommended Profiles</p>
+                        <h2>Recommended Profiles</h2>
+                    </div>
+                    <a href="{{ discover_route }}" class="chain-home__section-link">Discover people</a>
+                </div>
+                <div class="chain-home__grid chain-home__grid--profiles">
+                    {% for profile in recommended_profiles %}
+                    <a href="{{ profile.profile_url }}" class="chain-home__profile-card chain-clickable-card chain-card">
+                        <span class="chain-home__avatar chain-home__avatar--lg">
+                            {% if profile.avatar_url %}
+                            <img src="{{ profile.avatar_url }}" alt="{{ profile.display_name }}">
+                            {% else %}
+                            {{ profile.initial }}
+                            {% endif %}
+                        </span>
+                        {% if profile.display_name %}<h3>{{ profile.display_name }}</h3>{% endif %}
+                        {% if profile.location %}<p>{{ profile.location }}</p>{% endif %}
+                        <div class="chain-home__meta-row">
+                            {% if profile.creator_category %}<span class="chain-pill">{{ profile.creator_category }}</span>{% endif %}
+                            {% if profile.verified %}
+                            <span class="chain-pill">Verified</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                    {% if not recommended_profiles %}
+                    <div class="chain-home__empty-card">
+                        <h3>No profiles yet. Complete your profile to appear here.</h3>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+        </main>
+
+        <aside class="chain-home__desktop-sidebar chain-home__desktop-sidebar--right">
+            <section class="chain-home__section chain-home__section--desktop-top">
+                <div class="chain-home__section-head">
+                    <div>
+                        <p class="chain-home__kicker">Creator tools</p>
+                        <h2>Creator tools</h2>
+                    </div>
+                </div>
+                <div class="chain-home__creator-panel chain-card">
+                    {% if is_logged_in %}
+                    <div>
+                        <h3>Wallet balance</h3>
+                        <p class="chain-home__wallet-balance">{{ wallet.label_balance }} coins</p>
+                        <div class="chain-home__meta-row">
+                            <span class="chain-pill">Gift earnings {{ wallet.gift_earnings }}</span>
+                            <span class="chain-pill">Creator wallet</span>
+                        </div>
+                    </div>
+                    <div class="chain-home__creator-actions">
+                        <a href="{{ drawer_wallet }}" class="chain-btn chain-btn-primary">Wallet</a>
+                        <a href="{{ live_create }}" class="chain-btn chain-btn-secondary">Start Live</a>
+                    </div>
+                    {% else %}
+                    <div>
+                        <h3>Open creator tools</h3>
+                        <p>Go live, upload reels, manage your wallet and build your profile from one place.</p>
+                    </div>
+                    <div class="chain-home__creator-actions">
+                        <a href="{{ register_route }}" class="chain-btn chain-btn-primary">Create account</a>
+                        <a href="{{ login_route }}" class="chain-btn chain-btn-secondary">Log in</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="chain-home__section">
+                <div class="chain-home__section-head">
+                    <div>
+                        <p class="chain-home__kicker">Dating Matches</p>
+                        <h2>Dating Matches</h2>
+                    </div>
+                </div>
+                <div class="chain-home__grid chain-home__grid--matches chain-home__grid--sidebar">
+                    {% for profile in dating_matches %}
+                    <a href="{{ profile.profile_url }}" class="chain-home__match-card chain-clickable-card chain-card">
+                        <span class="chain-home__avatar chain-home__avatar--lg">
+                            {% if profile.avatar_url %}
+                            <img src="{{ profile.avatar_url }}" alt="{{ profile.display_name }}">
+                            {% else %}
+                            {{ profile.initial }}
+                            {% endif %}
+                        </span>
+                        {% if profile.display_name %}<h3>{{ profile.display_name }}</h3>{% endif %}
+                        {% if profile.location %}<p>{{ profile.location }}</p>{% endif %}
+                        <div class="chain-home__meta-row">
+                            <span class="chain-pill">Dating</span>
+                            {% if profile.verified %}
+                            <span class="chain-pill">Verified</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                    {% if not dating_matches %}
+                    <div class="chain-home__empty-card">
+                        <h3>No matches available yet</h3>
+                        <p>Dating profiles will appear here once members opt in.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="chain-home__section">
+                <div class="chain-home__section-head">
+                    <div>
+                        <p class="chain-home__kicker">Safety</p>
+                        <h2>Trust and Safety</h2>
+                    </div>
+                </div>
+                <div class="chain-home__grid chain-home__grid--safety chain-home__grid--sidebar">
+                    <article class="chain-home__safety-card chain-card">
+                        <h3>Report fast</h3>
+                        <p>Flag content, rooms or people when something feels wrong.</p>
+                    </article>
+                    <article class="chain-home__safety-card chain-card">
+                        <h3>Block control</h3>
+                        <p>Keep your space clean by blocking unwanted accounts.</p>
+                    </article>
+                    <article class="chain-home__safety-card chain-card">
+                        <h3>Verified profiles</h3>
+                        <p>Look for verified badges when you want more confidence.</p>
+                    </article>
+                    <article class="chain-home__safety-card chain-card">
+                        <h3>Moderated live</h3>
+                        <p>Active live experiences can be reviewed and moderated.</p>
+                    </article>
+                </div>
+            </section>
+
+        </aside>
+    </div>
+
+    <nav class="chain-home__mobile-nav" aria-label="Bottom mobile navigation">
+        <a href="{{ home_route }}" class="is-active"><i class="fas fa-home"></i><small>Home</small></a>
+        <a href="{{ discover_route }}"><i class="fas fa-compass"></i><small>Discover</small></a>
+        <a href="{{ live_route }}"><i class="fas fa-video"></i><small>Live</small></a>
+        <a href="{{ drawer_messages }}"><i class="fas fa-comment"></i><small>Chat</small></a>
+        <a href="{{ drawer_profile }}"><i class="fas fa-user"></i><small>Profile</small></a>
     </nav>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // Lazy loading and feed interactions
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Phase 8 Homepage Loaded');
-    });
-</script>
+<script src="/static/js/chain_home.js"></script>
 {% endblock %}

@@ -1,7 +1,7 @@
 import os
 import time
 from datetime import datetime, timezone, timedelta
-from flask import Flask, g, redirect, render_template, request, session
+from flask import Flask, g, jsonify, redirect, render_template, request, session, send_from_directory
 from engines.cache_engine import init_cache
 from engines.performance_engine import timed
 from engines.scheduler_engine import init_scheduler
@@ -32,8 +32,12 @@ from services.homepage_service import get_homepage_data
 from services.profile_service import get_current_profile, get_profile_by_username
 from services.notification_service import get_my_notifications
 from services.auth_service import get_current_user, refresh_chain_session
+from api_routes.profile_routes import login_required
+from services.neon_service import get_neon_health, prime_neon_runtime
+from utils.supabase_client import SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, get_supabase, get_supabase_admin
 
 load_dotenv(dotenv_path=".env")
+_SUPABASE_HEALTH_CACHE = {"expires_at": 0.0, "payload": None}
 
 def create_app():
     app = Flask(__name__)
@@ -50,6 +54,20 @@ def create_app():
     init_cache(app)
     init_scheduler(app)
     app.config.from_object("config.settings.Config")
+    try:
+        prime_neon_runtime(
+            [
+                "chain_profiles",
+                "chain_posts",
+                "chain_stories",
+                "chain_status_posts",
+                "chain_reels",
+                "chain_live_rooms",
+                "chain_media_uploads",
+            ]
+        )
+    except Exception as error:
+        print(f"[app] Neon warm-up skipped: {error}")
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(profile_bp)
@@ -86,6 +104,40 @@ def create_app():
         current_profile = None
         unread_count = 0
         wallet_balance = 0
+        available_routes = {rule.rule for rule in app.url_map.iter_rules()}
+        feature_candidates = {
+            "home": ["/"],
+            "discover": ["/discover/"],
+            "live": ["/live/"],
+            "messages": ["/messages/"],
+            "wallet": ["/wallet/"],
+            "profile": ["/profile/"],
+            "login": ["/auth/login"],
+            "register": ["/auth/register"],
+            "friends": ["/friends/", "/discover/"],
+            "reels": ["/reels/", "/discover/"],
+            "notifications": ["/notifications/", "/profile/"],
+            "dating": ["/dating/discover", "/discover/"],
+            "create_post": ["/features/create-post", "/posts/create", "/post/create", "/create-post", "/profile/"],
+            "create_story": ["/status/create", "/profile/"],
+            "upload_reel": ["/features/upload-reel", "/reels/", "/profile/"],
+            "upload_video": ["/features/upload-video", "/upload/video", "/media/upload", "/profile/"],
+            "go_live": ["/live/studio", "/live/"],
+            "settings": ["/profile/settings", "/discover/"],
+            "help": ["/discover/"],
+        }
+
+        def safe_link(feature_name, logged_in=None):
+            signed_in = current_profile is not None if logged_in is None else bool(logged_in)
+            fallback_logged_in = "/profile/" if signed_in else "/auth/login"
+            fallback_logged_out = "/auth/login"
+            candidates = feature_candidates.get(feature_name, [])
+            for candidate in candidates:
+                if candidate in available_routes:
+                    if not signed_in and candidate.startswith(("/messages/", "/wallet/", "/profile/", "/notifications/")):
+                        return fallback_logged_out
+                    return candidate
+            return fallback_logged_in if signed_in else fallback_logged_out
         
         # Priority: auth_user_id in session
         if "auth_user_id" in session:
@@ -103,13 +155,22 @@ def create_app():
             "g_current": current_profile,
             "g_unread_count": unread_count,
             "g_wallet_balance": wallet_balance,
-            "session": session
+            "session": session,
+            "safe_link": safe_link,
         }
 
     @app.route("/")
     def home():
         with timed("home"):
             return render_template("chain_home.html", **get_homepage_data())
+
+    @app.route("/login")
+    def legacy_login():
+        return redirect("/auth/login", code=302)
+
+    @app.route("/register")
+    def legacy_register():
+        return redirect("/auth/register", code=302)
 
     @app.route("/terms")
     def terms():
@@ -118,6 +179,88 @@ def create_app():
     @app.route("/privacy")
     def privacy():
         return render_template("dashboard/legal.html", page_title="Privacy Policy", page_intro="This page explains how CHAIN stores profile data, wallet activity, live interactions, and notifications when connected to Supabase.")
+
+    @app.route("/health/db")
+    def health_db():
+        health = get_neon_health()
+        status = 200 if health.get("connected") else 503
+        return jsonify({"service": "neon", **health}), status
+
+    @app.route("/health/supabase")
+    def health_supabase():
+        now = time.monotonic()
+        cached = _SUPABASE_HEALTH_CACHE.get("payload")
+        if cached is not None and _SUPABASE_HEALTH_CACHE.get("expires_at", 0) > now:
+            return jsonify(cached), 200
+        health = {
+            "service": "supabase",
+            "url_present": bool(SUPABASE_URL),
+            "anon_key_present": bool(SUPABASE_ANON_KEY),
+            "service_role_present": bool(SUPABASE_SERVICE_ROLE_KEY),
+            "client_ready": False,
+            "admin_ready": False,
+            "auth_ready": False,
+            "storage_ready": False,
+            "error": None,
+        }
+        try:
+            client = get_supabase()
+            admin = get_supabase_admin()
+            health["client_ready"] = True
+            health["admin_ready"] = True
+            health["auth_ready"] = hasattr(client, "auth")
+            storage = getattr(admin, "storage", None)
+            health["storage_ready"] = storage is not None
+            if storage is not None and hasattr(storage, "list_buckets"):
+                try:
+                    storage.list_buckets()
+                    health["storage_reachable"] = True
+                except Exception as error:
+                    health["storage_reachable"] = False
+                    health["storage_error"] = str(error)
+        except Exception as error:
+            health["error"] = str(error)
+        _SUPABASE_HEALTH_CACHE["payload"] = dict(health)
+        _SUPABASE_HEALTH_CACHE["expires_at"] = now + 30
+        status = 200 if health["url_present"] and health["anon_key_present"] and health["service_role_present"] else 503
+        return jsonify(health), status
+
+    @app.route("/features/create-post")
+    @login_required
+    def feature_create_post():
+        return render_template(
+            "dashboard/feature_page.html",
+            title="Create Post",
+            section="feature",
+            message="Post creation is being connected to the live CHAIN publishing flow.",
+        )
+
+    @app.route("/features/upload-reel")
+    @login_required
+    def feature_upload_reel():
+        return render_template(
+            "dashboard/feature_page.html",
+            title="Upload Reel",
+            section="feature",
+            message="Reel upload is being connected to the live CHAIN media flow.",
+        )
+
+    @app.route("/features/upload-video")
+    @login_required
+    def feature_upload_video():
+        return render_template(
+            "dashboard/feature_page.html",
+            title="Upload Video",
+            section="feature",
+            message="Video upload is being connected to the live CHAIN media flow.",
+        )
+
+    @app.route("/favicon.ico")
+    def favicon():
+        favicon_path = os.path.join(app.static_folder or "static", "img", "favicon.ico")
+        if os.path.exists(favicon_path):
+            return send_from_directory(os.path.join(app.static_folder, "img"), "favicon.ico")
+        return ("", 204)
 
     @app.errorhandler(404)
     def page_not_found(e):
@@ -146,4 +289,6 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    is_production = os.getenv("FLASK_ENV") == "production" or os.getenv("ENV") == "production"
+    port = int(os.getenv("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port, debug=not is_production, use_reloader=not is_production)

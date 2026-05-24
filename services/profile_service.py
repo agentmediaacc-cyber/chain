@@ -1,11 +1,13 @@
 import random
 import re
 from datetime import datetime, timezone
+import uuid
 
 from flask import session
 
 from engines.cache_engine import cache_key, delete_cache, get_cache, set_cache
 from engines.performance_engine import normalize_username, profile_completion_score, safe_int
+from services.neon_service import execute, fetch_all, fetch_one, get_table_columns, insert_row, table_exists as neon_table_exists
 from services.supabase_safe import column_safe_payload, safe_count, safe_insert, safe_select, safe_update, table_exists
 
 
@@ -76,6 +78,31 @@ PROFILE_COLUMNS = {
     "linked_providers",
     "username_slug",
     "oauth_metadata",
+    "is_creator",
+    "created_at",
+    "updated_at",
+}
+
+NEON_PROFILE_COLUMNS = {
+    "id",
+    "auth_user_id",
+    "email",
+    "username",
+    "display_name",
+    "full_name",
+    "bio",
+    "phone",
+    "town",
+    "region",
+    "current_location",
+    "country_origin",
+    "avatar_url",
+    "creator_category",
+    "profile_type",
+    "is_verified",
+    "verified",
+    "profile_completed",
+    "dating_mode_enabled",
     "is_creator",
     "created_at",
     "updated_at",
@@ -189,6 +216,85 @@ def normalize_profile(profile):
     return normalized
 
 
+def _neon_profiles_enabled():
+    return neon_table_exists("chain_profiles")
+
+
+def _neon_profile_columns():
+    columns = [column for column in get_table_columns("chain_profiles", timeout_ms=500) if column in NEON_PROFILE_COLUMNS]
+    if not columns:
+        columns = ["id", "auth_user_id", "email", "username", "display_name", "full_name", "profile_completed", "created_at", "updated_at"]
+    return ", ".join(columns)
+
+
+def _neon_get_profile_by(field, value):
+    if not _neon_profiles_enabled() or value in (None, ""):
+        return None
+    if field in {"id", "auth_user_id"}:
+        try:
+            uuid.UUID(str(value))
+        except (ValueError, TypeError):
+            return None
+    try:
+        row = fetch_one(
+            f"SELECT {_neon_profile_columns()} FROM chain_profiles WHERE {field} = %s AND deleted_at IS NULL LIMIT 1",
+            [value],
+            timeout_ms=500,
+        )
+        return normalize_profile(row) if row else None
+    except Exception as error:
+        print(f"[profile_service] neon lookup failed for {field}: {error}")
+        return None
+
+
+def _neon_insert_profile(payload):
+    return insert_row("chain_profiles", payload, returning="id, auth_user_id, email, username, display_name, full_name, profile_completed", timeout_ms=700)
+
+
+def _neon_update_profile(profile_id, payload):
+    if not payload:
+        return None
+    assignments = ", ".join(f"{key} = %s" for key in payload.keys())
+    params = list(payload.values()) + [profile_id]
+    execute(
+        f"UPDATE chain_profiles SET {assignments}, updated_at = now() WHERE id = %s",
+        params,
+        timeout_ms=700,
+    )
+    return _neon_get_profile_by("id", profile_id)
+
+
+def ensure_neon_profile(auth_user_id, defaults=None):
+    defaults = defaults or {}
+    profile = _neon_get_profile_by("auth_user_id", auth_user_id)
+    if profile:
+        return True, profile
+    if not _neon_profiles_enabled():
+        return False, "Neon chain_profiles table is unavailable."
+    username = normalize_username(defaults.get("username") or session.get("username") or "chainuser")
+    if not _username_valid(username):
+        username = "chainuser"
+    while _neon_get_profile_by("username", username):
+        username = _username_suggestions(username, defaults.get("town"))[0]
+    payload = {
+        "auth_user_id": auth_user_id,
+        "email": _clean_email(defaults.get("email") or session.get("email")),
+        "username": username,
+        "display_name": (defaults.get("display_name") or defaults.get("full_name") or username).strip(),
+        "full_name": (defaults.get("full_name") or defaults.get("display_name") or username).strip(),
+        "profile_completed": bool(defaults.get("profile_completed", False)),
+        "dating_mode_enabled": bool(defaults.get("dating_mode_enabled", False)),
+        "is_creator": bool(defaults.get("profile_type") in {"creator", "host"}),
+        "creator_category": defaults.get("profile_type"),
+    }
+    try:
+        _neon_insert_profile(payload)
+        return True, _neon_get_profile_by("auth_user_id", auth_user_id)
+    except Exception as error:
+        print(f"[profile_service] ensure_neon_profile failed: {error}")
+        return False, "Profile could not be saved yet."
+
+
 def get_current_profile():
     try:
         auth_user_id = session.get("auth_user_id")
@@ -199,12 +305,16 @@ def get_current_profile():
         if cached_profile is not None:
             return cached_profile
 
-        profiles = safe_select("chain_profiles", columns="*", filters={"auth_user_id": auth_user_id}, limit=1)
-        if not profiles and session.get("profile_id"):
-            profiles = safe_select("chain_profiles", columns="*", filters={"id": session.get("profile_id")}, limit=1)
+        profile = _neon_get_profile_by("auth_user_id", auth_user_id)
+        if not profile and session.get("profile_id"):
+            profile = _neon_get_profile_by("id", session.get("profile_id"))
+        if not profile:
+            profiles = safe_select("chain_profiles", columns="*", filters={"auth_user_id": auth_user_id}, limit=1)
+            if not profiles and session.get("profile_id"):
+                profiles = safe_select("chain_profiles", columns="*", filters={"id": session.get("profile_id")}, limit=1)
+            profile = normalize_profile(profiles[0]) if profiles else None
 
-        if profiles:
-            profile = normalize_profile(profiles[0])
+        if profile:
             session["profile_id"] = profile["id"]
             session["username"] = profile["username"]
             set_cache(cache_key("current_profile", auth_user_id), profile, ttl=60)
@@ -239,8 +349,10 @@ def get_profile_by_username(username):
         cached_profile = get_cache(key)
         if cached_profile is not None:
             return cached_profile
-        profiles = safe_select("chain_profiles", columns="*", filters={"username": cleaned}, limit=1)
-        profile = normalize_profile(profiles[0]) if profiles else None
+        profile = _neon_get_profile_by("username", cleaned)
+        if not profile:
+            profiles = safe_select("chain_profiles", columns="*", filters={"username": cleaned}, limit=1)
+            profile = normalize_profile(profiles[0]) if profiles else None
         set_cache(key, profile, ttl=120)
         return profile
     except Exception as error:
@@ -253,8 +365,10 @@ def get_profile_by_id(profile_id):
     cached_profile = get_cache(key)
     if cached_profile is not None:
         return cached_profile
-    profiles = safe_select("chain_profiles", columns="*", filters={"id": profile_id}, limit=1, order_by=None)
-    profile = normalize_profile(profiles[0]) if profiles else None
+    profile = _neon_get_profile_by("id", profile_id)
+    if not profile:
+        profiles = safe_select("chain_profiles", columns="*", filters={"id": profile_id}, limit=1, order_by=None)
+        profile = normalize_profile(profiles[0]) if profiles else None
     set_cache(key, profile, ttl=120)
     return profile
 
@@ -387,12 +501,19 @@ def _check_duplicate_identity(payload, existing_id=None):
     town = payload.get("town")
 
     if username:
+        owner = _neon_get_profile_by("username", username)
+        if owner and owner.get("id") != existing_id:
+            suggestions = ", ".join(_username_suggestions(username, town=town))
+            return False, f"That username is already in use. Try {suggestions}."
         owner = safe_select("chain_profiles", columns="id", filters={"username": username}, limit=1, order_by=None)
         if owner and owner[0].get("id") != existing_id:
             suggestions = ", ".join(_username_suggestions(username, town=town))
             return False, f"That username is already in use. Try {suggestions}."
 
     if email:
+        owner = _neon_get_profile_by("email", email)
+        if owner and owner.get("id") != existing_id:
+            return False, "That email is already connected to another CHAIN profile."
         for field in ("normalized_email", "email"):
             owner = safe_select("chain_profiles", columns="id", filters={field: email}, limit=1, order_by=None)
             if owner and owner[0].get("id") != existing_id:
@@ -420,7 +541,7 @@ def bootstrap_profile_for_current_user():
     base_username = normalize_username(session.get("username") or ((email or "chain").split("@")[0]))
     username = base_username if _username_valid(base_username) else "chainuser"
 
-    while safe_select("chain_profiles", columns="id", filters={"username": username}, limit=1, order_by=None):
+    while _neon_get_profile_by("username", username) or safe_select("chain_profiles", columns="id", filters={"username": username}, limit=1, order_by=None):
         username = _username_suggestions(base_username)[0]
 
     payload = {
@@ -430,7 +551,22 @@ def bootstrap_profile_for_current_user():
         "phone": session.get("phone"),
         "profile_type": "member",
     }
-    return create_or_update_profile(payload, auth_user_id=uid)
+    ok, result = ensure_neon_profile(
+        uid,
+        {
+            "email": email,
+            "username": username,
+            "full_name": session.get("full_name") or username.replace("_", " ").title(),
+            "profile_completed": False,
+            "profile_type": "member",
+        },
+    )
+    if ok and result:
+        session["profile_id"] = result.get("id")
+        session["username"] = result.get("username")
+        delete_cache(cache_key("current_profile", uid))
+        return True, result
+    return False, result
 
 
 def create_or_update_profile(data, auth_user_id=None):
@@ -442,7 +578,7 @@ def create_or_update_profile(data, auth_user_id=None):
         if not _username_valid(payload.get("username")):
             return False, "Use 3 to 30 lowercase letters, numbers or underscores only."
 
-        existing = _find_existing_profile(
+        existing = _neon_get_profile_by("auth_user_id", uid) or _find_existing_profile(
             uid=uid,
             profile_id=session.get("profile_id"),
             username=payload.get("username"),
@@ -453,16 +589,41 @@ def create_or_update_profile(data, auth_user_id=None):
             return False, duplicate_error
 
         if existing:
-            safe_update("chain_profiles", payload, eq={"id": existing["id"]}, fallback_columns=PROFILE_COLUMNS)
+            neon_payload = {
+                "email": payload.get("email"),
+                "username": payload.get("username"),
+                "display_name": payload.get("full_name"),
+                "full_name": payload.get("full_name"),
+                "bio": payload.get("bio"),
+                "phone": payload.get("phone"),
+                "town": payload.get("town"),
+                "region": payload.get("region"),
+                "current_location": payload.get("current_location"),
+                "country_origin": payload.get("country_origin"),
+                "avatar_url": payload.get("avatar_url"),
+                "creator_category": payload.get("creator_category"),
+                "profile_completed": False,
+                "dating_mode_enabled": payload.get("dating_mode_enabled"),
+                "is_creator": payload.get("is_creator"),
+            }
+            _neon_update_profile(existing["id"], {key: value for key, value in neon_payload.items() if key in NEON_PROFILE_COLUMNS})
         else:
-            safe_insert("chain_profiles", payload, fallback_columns=PROFILE_COLUMNS)
+            ok, profile_or_error = ensure_neon_profile(
+                uid,
+                {
+                    "email": payload.get("email"),
+                    "username": payload.get("username"),
+                    "full_name": payload.get("full_name"),
+                    "display_name": payload.get("full_name"),
+                    "dating_mode_enabled": payload.get("dating_mode_enabled"),
+                    "profile_type": payload.get("profile_type"),
+                },
+            )
+            if not ok:
+                return False, profile_or_error
 
-        saved = safe_select("chain_profiles", filters={"auth_user_id": uid}, limit=1)
-        if not saved and payload.get("username"):
-            saved = safe_select("chain_profiles", filters={"username": payload["username"]}, limit=1)
-
-        if saved:
-            profile = normalize_profile(saved[0])
+        profile = _neon_get_profile_by("auth_user_id", uid)
+        if profile:
             session["profile_id"] = profile["id"]
             session["username"] = profile["username"]
             delete_cache(cache_key("current_profile", uid))
@@ -493,7 +654,23 @@ def update_profile_setup(profile_id, form):
         if not is_valid:
             return False, duplicate_error
 
-        safe_update("chain_profiles", payload, eq={"id": profile_id}, fallback_columns=PROFILE_COLUMNS)
+        neon_payload = {
+            "email": payload.get("email"),
+            "username": payload.get("username"),
+            "display_name": payload.get("full_name"),
+            "full_name": payload.get("full_name"),
+            "bio": payload.get("bio"),
+            "phone": payload.get("phone"),
+            "town": payload.get("town"),
+            "region": payload.get("region"),
+            "current_location": payload.get("current_location"),
+            "country_origin": payload.get("country_origin"),
+            "avatar_url": payload.get("avatar_url"),
+            "creator_category": payload.get("creator_category"),
+            "dating_mode_enabled": payload.get("dating_mode_enabled"),
+            "is_creator": payload.get("is_creator"),
+        }
+        _neon_update_profile(profile_id, {key: value for key, value in neon_payload.items() if key in NEON_PROFILE_COLUMNS})
         _save_onboarding_foundations(profile_id, form, payload)
         delete_cache(cache_key("profile_id", profile_id))
         delete_cache(cache_key("profile_username", profile.get("username")))
@@ -613,17 +790,11 @@ def complete_profile_setup(profile_id):
         return False, "Profile not found."
 
     completed = is_profile_complete(profile)
-    safe_update(
-        "chain_profiles",
-        {
-            "profile_completed": completed,
-            "profile_completion": get_profile_completion(profile),
-            "onboarding_step": "complete" if completed else "profile_setup",
-            "updated_at": _utcnow_iso(),
-        },
-        eq={"id": profile_id},
-        fallback_columns=PROFILE_COLUMNS,
-    )
+    _neon_update_profile(profile_id, {"profile_completed": completed})
+    delete_cache(cache_key("profile_id", profile_id))
+    delete_cache(cache_key("current_profile", profile.get("auth_user_id")))
+    if profile.get("username"):
+        delete_cache(cache_key("profile_username", profile.get("username")))
     refreshed = get_profile_by_id(profile_id)
     return True, refreshed
 

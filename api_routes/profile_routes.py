@@ -224,12 +224,10 @@ def onboarding():
         ok, result = bootstrap_profile_for_current_user()
         if not ok:
             print("[profile_onboarding] bootstrap failed:", result)
-            flash("We could not finish your profile yet. Please check the highlighted fields.", "error")
-            return redirect(url_for("auth.register"))
+            return render_template("auth/profile_error.html", error_detail=result), 200
         profile = get_current_profile()
         if not profile:
-            flash("We could not finish your profile yet. Please check the highlighted fields.", "error")
-            return redirect(url_for("auth.register"))
+            return render_template("auth/profile_error.html", error_detail="Profile could not be loaded after account creation."), 200
     if request.method == "POST":
         data = dict(request.form)
         
@@ -439,4 +437,4 @@ def ai_assist():
 @profile_bp.route("/messages")
 @login_required
 def my_messages():
-    return redirect(url_for("chat.inbox"))
+    return redirect(url_for("chat_v2.inbox"))

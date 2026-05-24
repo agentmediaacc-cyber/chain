@@ -176,6 +176,9 @@ def _metadata_avatar(user):
 
 
 def _profile_exists_by_username(username):
+    from services.profile_service import get_profile_by_username
+    if get_profile_by_username(username):
+        return True
     rows = safe_select("chain_profiles", columns="id", filters={"username": username}, limit=1, order_by=None)
     return bool(rows)
 
@@ -272,12 +275,22 @@ def _ensure_profile_dependencies(profile_id):
 
 
 def _find_profile_for_user(user):
+    from services.profile_service import ensure_neon_profile, get_profile_by_id
     user_id = getattr(user, "id", None)
     email = clean_email(getattr(user, "email", None))
     if user_id:
-        rows = safe_select("chain_profiles", filters={"auth_user_id": user_id}, columns="*", limit=1, order_by=None)
-        if rows:
-            return rows[0]
+        ok, profile = ensure_neon_profile(
+            user_id,
+            {
+                "email": email,
+                "username": (_metadata_name(user) or email.split("@")[0] if email else "chainuser"),
+                "full_name": _metadata_name(user) or email.split("@")[0] if email else "Chain User",
+                "display_name": _metadata_name(user) or email.split("@")[0] if email else "Chain User",
+                "profile_completed": False,
+            },
+        )
+        if ok and profile:
+            return profile
     if email:
         rows = safe_select("chain_profiles", filters={"email": email}, columns="*", limit=1, order_by=None)
         if rows:
@@ -286,7 +299,7 @@ def _find_profile_for_user(user):
 
 
 def sync_oauth_profile(user, provider):
-    from services.profile_service import get_profile_completion, is_profile_complete, normalize_profile
+    from services.profile_service import ensure_neon_profile, get_profile_completion, get_current_profile, is_profile_complete, normalize_profile
 
     email = clean_email(getattr(user, "email", None))
     full_name = (_metadata_name(user) or email.split("@")[0] if email else "Chain User").strip()
@@ -339,14 +352,21 @@ def sync_oauth_profile(user, provider):
         payload["premium_tier"] = "free"
         payload["profile_type"] = "member"
 
-    safe_payload = column_safe_payload("chain_profiles", payload, fallback_columns=AUTH_PROFILE_COLUMNS)
-    if profile:
-        safe_update("chain_profiles", safe_payload, eq={"id": profile["id"]}, fallback_columns=AUTH_PROFILE_COLUMNS)
-    else:
-        safe_insert("chain_profiles", safe_payload, fallback_columns=AUTH_PROFILE_COLUMNS)
-
-    synced = _find_profile_for_user(user)
-    normalized = normalize_profile(synced) if synced else None
+    ok, synced_or_error = ensure_neon_profile(
+        getattr(user, "id", None),
+        {
+            "email": email,
+            "username": username,
+            "display_name": full_name,
+            "full_name": full_name,
+            "profile_completed": profile_completed,
+            "profile_type": "member",
+        },
+    )
+    if not ok:
+        print(f"[auth_service] sync_oauth_profile neon ensure failed: {synced_or_error}")
+        return None
+    normalized = synced_or_error
     if normalized:
         _ensure_profile_dependencies(normalized["id"])
         delete_cache(cache_key("profile_username", normalized.get("username")))
@@ -378,7 +398,7 @@ def register_chain_user(email, password, username, full_name, extra=None):
     if not extra.get("human_confirmed"):
         return False, "Please confirm that you are a real person."
 
-    if safe_select("chain_profiles", columns="id", filters={"username": username}, limit=1, order_by=None):
+    if _profile_exists_by_username(username):
         return False, f"Username is already taken. Try: {', '.join(username_suggestions(username, extra.get('town'))[:3])}"
 
     if safe_select("chain_profiles", columns="id", filters={"normalized_email": email}, limit=1, order_by=None):
@@ -456,10 +476,11 @@ def login_chain_user(email, password=None):
     resolved_email = login_id
     if "@" not in login_id:
         username = normalize_username(login_id)
-        profile_rows = safe_select("chain_profiles", columns="email", filters={"username": username}, limit=1, order_by=None)
-        if not profile_rows:
+        from services.profile_service import get_profile_by_username
+        profile = get_profile_by_username(username)
+        if not profile:
             return False, "Username not found."
-        resolved_email = clean_email(profile_rows[0].get("email"))
+        resolved_email = clean_email(profile.get("email"))
 
     try:
         auth_res = get_supabase().auth.sign_in_with_password({"email": resolved_email, "password": password})

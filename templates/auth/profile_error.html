@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Profile Setup Error | CHAIN{% endblock %}
+{% block body_class %}chain-wallpaper-auth{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/chain_auth.css">
+{% endblock %}
+
+{% block content %}
+<section class="chain-auth-shell chain-auth-shell--login">
+    <div class="chain-auth-layout">
+        <aside class="chain-auth-brand-panel">
+            <div class="chain-auth-brand-mark" aria-hidden="true">C</div>
+            <h2>Your account exists. Your profile needs another try.</h2>
+            <p>CHAIN could not save the first profile record yet. You can retry onboarding or sign out and back in without losing your account.</p>
+        </aside>
+
+        <div class="chain-auth-card chain-auth-card--login">
+            <div class="chain-auth-head">
+                <h1>Profile setup needs attention</h1>
+                <p>Your account was created, but your profile could not be saved yet. Please try again or contact support.</p>
+            </div>
+
+            {% if error_detail %}
+            <div class="chain-auth-alert chain-auth-alert--error">{{ error_detail }}</div>
+            {% endif %}
+
+            <div class="chain-auth-panel">
+                <div class="chain-auth-form">
+                    <a href="/profile/onboarding" class="primary auth-submit-btn">Retry profile setup</a>
+                    <a href="/auth/logout" class="secondary">Log out and sign in again</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

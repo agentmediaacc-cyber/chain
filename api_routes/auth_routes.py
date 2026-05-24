@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
 from services.auth_service import (
     get_current_profile,
@@ -16,6 +16,30 @@ from services.auth_service import (
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+def _queue_oauth_error():
+    session["oauth_error_message"] = "We could not complete social login. Please try again or use email login."
+
+
+def _clear_oauth_error_state():
+    session.pop("oauth_error_message", None)
+    flashes = session.get("_flashes", [])
+    if flashes:
+        session["_flashes"] = [item for item in flashes if item[0] != "oauth_error"]
+        if not session["_flashes"]:
+            session.pop("_flashes", None)
+
+
+def _should_show_oauth_error():
+    if request.args.get("oauth_error"):
+        return True
+    if request.args.get("error"):
+        return True
+    if request.args.get("error_description"):
+        return True
+    if request.args.get("oauth") == "failed":
+        return True
+    return False
 
 
 def _next_target(default="/profile/"):
@@ -53,6 +77,7 @@ def login():
     if request.method == "GET" and existing_target:
         return redirect(existing_target)
     error = None
+    oauth_error = None
     if request.method == "POST":
         ok, result = login_chain_user(request.form.get("login_id"), request.form.get("password"))
         if ok:
@@ -60,7 +85,12 @@ def login():
         error = result
     if request.args.get("next"):
         session["auth_next"] = request.args.get("next")
-    return render_template("auth/login.html", error=error, next_path=session.get("auth_next"))
+    if request.method == "GET":
+        if _should_show_oauth_error():
+            oauth_error = session.pop("oauth_error_message", None) or "We could not complete social login. Please try again or use email login."
+        else:
+            _clear_oauth_error_state()
+    return render_template("auth/login.html", error=error, oauth_error=oauth_error, next_path=session.get("auth_next"))
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -114,8 +144,8 @@ def google_login():
     url = get_oauth_url("google")
     if url:
         return redirect(url)
-    flash("Google login is unavailable right now.", "oauth_error")
-    return redirect(url_for("auth.login"))
+    _queue_oauth_error()
+    return redirect(url_for("auth.login", oauth_error=1))
 
 
 @auth_bp.route("/facebook")
@@ -125,8 +155,8 @@ def facebook_login():
     url = get_oauth_url("facebook")
     if url:
         return redirect(url)
-    flash("Facebook login is unavailable right now.", "oauth_error")
-    return redirect(url_for("auth.login"))
+    _queue_oauth_error()
+    return redirect(url_for("auth.login", oauth_error=1))
 
 
 @auth_bp.route("/google/callback")
@@ -134,23 +164,15 @@ def facebook_login():
 def oauth_callback():
     provider = request.path.split("/")[2]
     if not request.args.get("code"):
-        print("\n=== OAUTH CALLBACK DEBUG ===")
-        print("Provider:", provider)
-        print("Args:", dict(request.args))
-        print("Full URL:", request.url)
-        print("============================\n")
-
-        flash(
-            "OAuth login failed or callback code missing. Please try again.",
-            "oauth_error"
-        )
-        return redirect(url_for("auth.login"))
+        print(f"[auth.oauth_callback] {provider} callback missing code: {dict(request.args)}")
+        _queue_oauth_error()
+        return redirect(url_for("auth.login", oauth_error=1))
     ok, result = handle_oauth_callback(provider, request.args)
     if ok:
         session["auth_provider"] = provider
         return redirect(_post_login_redirect(result))
-    flash(result, "oauth_error")
-    return redirect(url_for("auth.login"))
+    _queue_oauth_error()
+    return redirect(url_for("auth.login", oauth_error=1))
 
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])

@@ -1,28 +1,123 @@
+.chain-wallpaper-auth .sidebar,
+.chain-wallpaper-auth .top-header,
+.chain-wallpaper-auth .mobile-nav {
+  display: none !important;
+}
+
+.chain-wallpaper-auth .chain-shell,
+.chain-wallpaper-auth .main-container,
+.chain-wallpaper-auth .content-body {
+  display: block;
+  min-height: 100vh;
+}
+
+.chain-wallpaper-auth .content-body {
+  padding-top: 0;
+}
+
 .chain-auth-shell {
-  max-width: 980px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 24px 16px 84px;
+}
+
+.chain-auth-shell--login {
+  display: grid;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.chain-auth-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 520px);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.chain-auth-brand-panel,
+.chain-auth-card,
+.chain-register-step {
+  border-radius: 32px;
+  border: 1px solid var(--chain-border);
+  box-shadow: var(--chain-shadow-lg);
+  backdrop-filter: blur(20px);
+}
+
+.chain-auth-brand-panel {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 34px;
+  color: #fff;
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,.18), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(255,255,255,.12), transparent 24%),
+    linear-gradient(145deg, #2b1737 0%, #6d2ee6 48%, #ef4d8d 100%);
+}
+
+.chain-auth-brand-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.18);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.chain-auth-brand-panel h2 {
+  margin: 0;
+  font-size: clamp(34px, 5vw, 54px);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+}
+
+.chain-auth-brand-panel p {
+  margin: 0;
+  max-width: 32rem;
+  color: rgba(255,255,255,.84);
+  line-height: 1.7;
+}
+
+.chain-auth-benefits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.chain-auth-benefits span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.16);
+  font-weight: 800;
 }
 
 .chain-auth-card {
   display: grid;
   gap: 18px;
-  padding: 22px;
-  border-radius: 32px;
-  border: 1px solid var(--chain-border);
+  padding: 26px;
   background:
     radial-gradient(circle at top right, rgba(122,99,222,.12), transparent 28%),
     radial-gradient(circle at top left, rgba(235,107,122,.12), transparent 26%),
-    linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,248,247,.92));
-  box-shadow: var(--chain-shadow-lg);
-  backdrop-filter: blur(20px);
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,248,247,.94));
+}
+
+.chain-auth-card--login {
+  align-content: center;
 }
 
 .chain-auth-head h1 {
   margin: 0 0 10px;
-  font-size: clamp(34px, 6vw, 58px);
-  line-height: 1;
-  letter-spacing: -.04em;
+  font-size: clamp(34px, 6vw, 50px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
 }
 
 .chain-auth-head p,
@@ -30,17 +125,6 @@
 .chain-auth-grid small,
 .chain-auth-link {
   color: var(--chain-muted);
-}
-
-.chain-auth-eyebrow,
-.chain-auth-step-label {
-  display: inline-block;
-  margin: 0 0 10px;
-  color: var(--chain-primary);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: .14em;
-  text-transform: uppercase;
 }
 
 .chain-auth-alert {
@@ -75,9 +159,7 @@
 .chain-register-step {
   display: none;
   padding: 20px;
-  border-radius: 26px;
-  background: rgba(255,255,255,.7);
-  border: 1px solid var(--chain-border);
+  background: rgba(255,255,255,.76);
   box-shadow: var(--chain-shadow-sm);
 }
 
@@ -89,6 +171,16 @@
   margin: 0 0 10px;
   font-size: clamp(26px, 4vw, 38px);
   line-height: 1.05;
+}
+
+.chain-auth-panel {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 26px;
+  background: rgba(255,255,255,.76);
+  border: 1px solid var(--chain-border);
+  box-shadow: var(--chain-shadow-sm);
 }
 
 .chain-auth-oauth-grid,
@@ -103,14 +195,49 @@
   grid-template-columns: repeat(3, minmax(0,1fr));
 }
 
+.chain-auth-oauth-grid--stacked {
+  grid-template-columns: 1fr;
+}
+
 .chain-auth-oauth {
   display: grid;
-  gap: 8px;
-  padding: 18px;
+  gap: 6px;
+  padding: 16px 18px;
   border-radius: 22px;
-  background: rgba(255,255,255,.78);
+  background: rgba(255,255,255,.9);
   border: 1px solid var(--chain-border);
   box-shadow: var(--chain-shadow-sm);
+  font-weight: 800;
+}
+
+.chain-auth-divider {
+  position: relative;
+  text-align: center;
+}
+
+.chain-auth-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(122,99,222,.12);
+}
+
+.chain-auth-divider span {
+  position: relative;
+  padding: 0 12px;
+  background: rgba(255,248,247,.98);
+  color: var(--chain-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chain-auth-form,
+.chain-auth-grid label {
+  display: grid;
+  gap: 8px;
 }
 
 .chain-auth-grid {
@@ -121,14 +248,20 @@
   grid-column: 1 / -1;
 }
 
-.chain-auth-grid label {
-  display: grid;
-  gap: 8px;
-}
-
 .chain-auth-grid input,
 .chain-auth-grid select {
   color: var(--chain-text);
+}
+
+.chain-auth-form .auth-submit-btn {
+  width: 100%;
+}
+
+.chain-auth-trust-row {
+  color: var(--chain-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .password-row {
@@ -199,25 +332,53 @@
   gap: 12px;
 }
 
+.chain-auth-actions--stack {
+  justify-content: center;
+  text-align: center;
+}
+
 .chain-auth-actions__right {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chain-auth-link--strong {
+  color: var(--chain-text);
+  font-weight: 800;
 }
 
 #register_submit {
   display: none;
 }
 
+@media (max-width: 960px) {
+  .chain-auth-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .chain-auth-brand-panel {
+    order: 2;
+  }
+}
+
 @media (max-width: 760px) {
+  .chain-auth-shell {
+    padding: 14px 14px 88px;
+  }
+
   .chain-auth-card,
-  .chain-register-step {
+  .chain-register-step,
+  .chain-auth-panel,
+  .chain-auth-brand-panel {
     padding: 18px;
   }
 
   .chain-auth-oauth-grid,
   .chain-auth-grid,
-  .chain-chip-grid {
+  .chain-chip-grid,
+  .chain-auth-benefits {
     grid-template-columns: 1fr;
   }
 

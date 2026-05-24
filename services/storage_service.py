@@ -2,7 +2,7 @@ import os
 import uuid
 import werkzeug.utils
 from utils.supabase_client import get_supabase_admin, SUPABASE_URL
-from services.supabase_safe import safe_insert
+from services.media_storage_service import record_media_upload_metadata
 
 # Configuration
 ALLOWED_EXTENSIONS = {
@@ -39,19 +39,16 @@ def build_storage_path(profile_id, upload_type, filename):
     return f"{profile_id}/{upload_type}/{unique_name}"
 
 def record_media_upload(profile_id, upload_type, bucket_name, file_path, public_url, mime_type, file_size, original_filename):
-    payload = {
-        "profile_id": profile_id,
-        "upload_type": upload_type,
-        "bucket_name": bucket_name,
-        "file_path": file_path,
-        "public_url": public_url,
-        "mime_type": mime_type,
-        "file_size": file_size,
-        "original_filename": original_filename,
-        "status": 'active'
-    }
-    result = safe_insert("chain_media_uploads", payload)
-    return result[0]['id'] if result and len(result) > 0 else None
+    return record_media_upload_metadata(
+        profile_id=profile_id,
+        upload_type=upload_type,
+        bucket_name=bucket_name,
+        file_path=file_path,
+        public_url=public_url,
+        mime_type=mime_type,
+        file_size=file_size,
+        original_filename=original_filename,
+    )
 
 def upload_file_to_bucket(file_obj, bucket_name, profile_id, upload_type, public=True):
     """

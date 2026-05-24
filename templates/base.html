@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Chain | Premium Live Social{% endblock %}</title>
+    <link rel="icon" href="/favicon.ico">
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#ff2f7d">
     <link rel="apple-touch-icon" href="/static/img/icon-192.png">
@@ -52,7 +53,7 @@
             <hr style="border: none; border-top: 1px solid var(--border); margin: 15px 0;">
             <a href="/wallet/" class="sidebar-link"><i class="fas fa-wallet"></i> Wallet & Gifts</a>
             <a href="/live/studio" class="sidebar-link"><i class="fas fa-plus-circle"></i> Create Live</a>
-            <a href="{{ '/profile/' if g_current else '/profile/onboarding' }}" class="sidebar-link"><i class="fas fa-user-circle"></i> My Profile</a>
+            <a href="{{ '/profile/' if g_current else '/auth/login' }}" class="sidebar-link"><i class="fas fa-user-circle"></i> My Profile</a>
         </nav>
 
         <div class="sidebar-footer" style="margin-top: 20px;">
@@ -81,7 +82,7 @@
                     <i class="fas fa-bell"></i>
                     <span class="notif-count" {% if not g_unread_count %}style="display: none;"{% endif %}>{{ g_unread_count or 0 }}</span>
                 </a>
-                <a href="{{ '/profile/' if g_current else '/profile/onboarding' }}" class="user-profile" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.86); border: 1px solid var(--chain-border); display: grid; place-items: center; overflow: hidden; text-decoration: none; color: var(--chain-text);">
+                <a href="{{ '/profile/' if g_current else '/auth/login' }}" class="user-profile" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.86); border: 1px solid var(--chain-border); display: grid; place-items: center; overflow: hidden; text-decoration: none; color: var(--chain-text);">
                     {% if g_current and g_current.avatar_url %}
                     <img src="{{ g_current.avatar_url }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
                     {% else %}
@@ -117,7 +118,7 @@
             {% endif %}
             <small style="font-size: 10px; margin-top: 2px;">Alerts</small>
         </a>
-        <a href="{{ '/profile/' if g_current else '/profile/onboarding' }}" class="mobile-link" style="text-decoration: none; color: #999; display: flex; flex-direction: column; align-items: center;">
+        <a href="{{ '/profile/' if g_current else '/auth/login' }}" class="mobile-link" style="text-decoration: none; color: #999; display: flex; flex-direction: column; align-items: center;">
             <i class="fas fa-user" style="font-size: 20px;"></i>
             <small style="font-size: 10px; margin-top: 2px;">Profile</small>
         </a>
