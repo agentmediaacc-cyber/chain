@@ -18,12 +18,26 @@ from services.logging_service import log_error, log_warning, log_info, log_metri
 
 load_dotenv(dotenv_path=".env")
 
+
+def _is_production_env():
+    return os.getenv("FLASK_ENV") == "production" or os.getenv("ENV") == "production"
+
+
+if not _is_production_env():
+    os.environ.setdefault("CHAIN_DISABLE_PREWARM", "1")
+    os.environ.setdefault("CHAIN_DISABLE_DB_PING", "1")
+    os.environ.setdefault("CHAIN_FAST_LOCAL", "1")
+
+
+def _flag_enabled(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
 # Configuration from Environment
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-POOL_MIN = int(os.getenv("DB_POOL_MIN", "2"))
-POOL_MAX = int(os.getenv("DB_POOL_MAX", "15"))
-POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300")) # 5 minutes
-STATEMENT_TIMEOUT_DEFAULT = int(os.getenv("DB_STATEMENT_TIMEOUT", "5000"))
+POOL_MIN = int(os.getenv("DB_POOL_MIN", "1"))
+POOL_MAX = int(os.getenv("DB_POOL_MAX", "20"))
+POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "600")) # 10 minutes
+STATEMENT_TIMEOUT_DEFAULT = int(os.getenv("DB_STATEMENT_TIMEOUT", "10000"))
 
 # State Management
 _POOL = None
@@ -130,66 +144,55 @@ def _pool_instance():
 
 def get_connection(timeout_ms: int = 5000, **kwargs):
     """
-    Acquires a healthy connection from the pool.
-    Includes pre-ping and recycling logic.
+    Acquires a connection from the pool.
+    Includes recycling logic. Pre-ping removed for performance.
     """
     # Backward compatibility for statement_timeout_ms
     timeout_ms = kwargs.get("statement_timeout_ms", timeout_ms)
     
     pool_inst = _pool_instance()
     if not pool_inst:
-        raise CircuitOpenError("Database connection pool is unavailable (circuit open or unconfigured)")
+        raise CircuitOpenError("Database connection pool is unavailable")
 
     conn = None
     now = time.time()
     
     # Try to get a healthy connection
-    for attempt in range(3):
+    for attempt in range(2):
         try:
             conn = pool_inst.getconn()
             conn_id = id(conn)
             
-            # 1. Connection Recycling (if too old, discard and get another)
+            # Connection Recycling
             created_at = _CONN_CREATED_AT.get(conn_id, 0)
             if created_at > 0 and (now - created_at) > POOL_RECYCLE:
-                log_info("neon_conn_recycle", age_sec=int(now - created_at))
                 pool_inst.putconn(conn, close=True)
                 _CONN_CREATED_AT.pop(conn_id, None)
                 conn = pool_inst.getconn()
                 conn_id = id(conn)
                 _CONN_CREATED_AT[conn_id] = now
             
-            # Track new connections
             if conn_id not in _CONN_CREATED_AT:
                 _CONN_CREATED_AT[conn_id] = now
 
-            # 2. Pre-Ping (verify connection is alive)
-            if not _is_connection_alive(conn):
-                log_warning("neon_conn_dead_on_checkout")
-                pool_inst.putconn(conn, close=True)
-                _CONN_CREATED_AT.pop(conn_id, None)
-                continue # Try again
-                
-            # 3. Configure connection timeouts
+            # Configure connection timeouts
             with conn.cursor() as cur:
                 cur.execute(f"SET statement_timeout = {int(timeout_ms)}")
-                cur.execute("SET idle_in_transaction_session_timeout = '30s'")
                 
             return conn
             
         except Exception as e:
             if conn:
-                try:
-                    pool_inst.putconn(conn, close=True)
+                try: pool_inst.putconn(conn, close=True)
                 except: pass
                 _CONN_CREATED_AT.pop(id(conn), None)
             
-            if attempt == 2:
+            if attempt == 1:
                 _NEON_BREAKER.failure(e)
-                log_error("neon_conn_acquire_failed", error=e, attempt=attempt+1)
+                log_error("neon_conn_acquire_failed", error=e)
                 raise NeonError(f"Failed to acquire database connection: {e}")
             
-            time.sleep(0.05 * (attempt + 1)) # Small backoff
+            time.sleep(0.01)
 
 def release_connection(conn):
     """Safely returns a connection to the pool."""
@@ -249,7 +252,7 @@ def _run_query(sql_text: str, params: Any = None, fetch: str = "all", timeout_ms
     finally:
         release_connection(conn)
 
-def fast_query(sql_text: str, params: Any = None, timeout_ms: int = 500, default: Any = None):
+def fast_query(sql_text: str, params: Any = None, timeout_ms: int = 2000, default: Any = None):
     """Route-safe query helper with strict timeout protection."""
     if not _NEON_BREAKER.allow():
         return default if default is not None else []
@@ -306,9 +309,25 @@ def get_neon_health():
     if _HEALTH_CACHE["payload"] and _HEALTH_CACHE["expires_at"] > now:
         return _HEALTH_CACHE["payload"]
 
+    if not _is_production_env() and (_flag_enabled("CHAIN_FAST_LOCAL") or _flag_enabled("CHAIN_DISABLE_DB_PING")):
+        payload = {
+            "status": "disabled",
+            "connected": False,
+            "latency_ms": 0,
+            "circuit_state": _NEON_BREAKER.get_state(),
+            "pool_ready": _POOL is not None,
+            "configured": bool(DATABASE_URL),
+            "ever_connected": _LAST_SUCCESS_AT > 0,
+            "local_fast_mode": True,
+        }
+        _HEALTH_CACHE["payload"] = payload
+        _HEALTH_CACHE["expires_at"] = now + 60
+        return payload
+
     try:
         start = time.perf_counter()
-        res = fast_query("SELECT 1", timeout_ms=500)
+        timeout_ms = 500 if _flag_enabled("CHAIN_DISABLE_DB_PING") else 5000
+        res = fast_query("SELECT 1", timeout_ms=timeout_ms)
         latency = (time.perf_counter() - start) * 1000
         connected = bool(res)
         payload = {
@@ -328,6 +347,8 @@ def get_neon_health():
 
 def prime_neon_runtime():
     """Pre-warms the connection pool."""
+    if not _is_production_env() and (_flag_enabled("CHAIN_FAST_LOCAL") or _flag_enabled("CHAIN_DISABLE_PREWARM")):
+        return None
     _DB_EXECUTOR.submit(_pool_instance)
 
 def get_pool_status():
@@ -340,8 +361,8 @@ def get_pool_status():
         "recent_success": (time.time() - _LAST_SUCCESS_AT) < 60 if _LAST_SUCCESS_AT > 0 else False
     }
 
-def get_table_columns(table_name: str, timeout_ms=500):
-    """Retrieves column names for a table with local caching."""
+def get_table_columns(table_name: str, timeout_ms=5000):
+    """Retrieves column names for a table using a faster pg_attribute query."""
     now = time.time()
     if table_name in _COLUMN_CACHE:
         entry = _COLUMN_CACHE[table_name]
@@ -349,9 +370,12 @@ def get_table_columns(table_name: str, timeout_ms=500):
             return entry["columns"]
 
     query = """
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = %s AND table_schema = 'public'
+        SELECT a.attname as column_name
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE c.relname = %s AND n.nspname = 'public'
+        AND a.attnum > 0 AND NOT a.attisdropped
     """
     rows = fast_query(query, (table_name,), timeout_ms=timeout_ms)
     columns = [r["column_name"] for r in rows] if rows else []
@@ -366,17 +390,11 @@ def get_table_columns(table_name: str, timeout_ms=500):
 def is_circuit_open():
     return not _NEON_BREAKER.allow()
 
-def table_exists(table_name: str, timeout_ms=500):
-    """Checks if a table exists in the public schema."""
-    query = """
-        SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
-            AND table_name = %s
-        )
-    """
+def table_exists(table_name: str, timeout_ms=2000):
+    """Checks if a table exists using a faster pg_class query."""
+    query = "SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = %s LIMIT 1"
     res = fast_query(query, (table_name,), timeout_ms=timeout_ms)
-    return res[0]["exists"] if res else False
+    return bool(res)
 
 def insert_row(table: str, payload: Dict[str, Any], returning: str = "id", timeout_ms: int = 2000):
     """Helper to insert a single row and return a column."""

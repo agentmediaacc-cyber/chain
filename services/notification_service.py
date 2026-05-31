@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 from engines.cache_engine import cache_key, delete_cache, get_cache, set_cache
 from services.profile_service import get_current_profile
 from services.supabase_safe import safe_count, safe_insert, safe_select, safe_update, table_exists
@@ -79,6 +80,9 @@ def create_notification(profile_id=None, actor_profile_id=None, title="", body="
 
 
 def get_my_notifications(limit=30):
+    if os.getenv("CHAIN_FAST_LOCAL") == "1" and os.getenv("FLASK_ENV", "development") != "production":
+        return [], None, 0
+
     current = get_current_profile()
     if not current:
         return [], None, 0

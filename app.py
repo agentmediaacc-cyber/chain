@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from api_routes.auth_routes import auth_bp
 from api_routes.profile_routes import profile_bp
+from api_routes.dashboard_routes import dashboard_bp
 from api_routes.matching_routes import matching_bp
 from api_routes.dating_routes import dating_bp
 from api_routes.message_routes import message_bp
@@ -51,6 +52,20 @@ from utils.supabase_client import SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, 
 load_dotenv(dotenv_path=".env")
 _SUPABASE_HEALTH_CACHE = {"expires_at": 0.0, "payload": None}
 
+
+def _is_production_env():
+    return os.getenv("FLASK_ENV") == "production" or os.getenv("ENV") == "production"
+
+
+if not _is_production_env():
+    os.environ.setdefault("CHAIN_DISABLE_PREWARM", "1")
+    os.environ.setdefault("CHAIN_DISABLE_DB_PING", "1")
+    os.environ.setdefault("CHAIN_FAST_LOCAL", "1")
+
+
+def _flag_enabled(name):
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
 from services.request_cache import cache_clear
 from services.logging_service import log_error, log_warning
 from services.metrics_service import increment, observe_route
@@ -63,6 +78,9 @@ from services import socket_events # Registers events
 
 def check_readiness():
     """Verifies that core backend services are responsive."""
+    if not _is_production_env() and (_flag_enabled("CHAIN_FAST_LOCAL") or _flag_enabled("CHAIN_DISABLE_DB_PING")):
+        return True
+
     from services.neon_service import get_neon_health
     from services.redis_service import get_redis_health
     from services.logging_service import log_info, log_error
@@ -80,7 +98,7 @@ def check_readiness():
 
 
 def should_start_delayed_prewarm(debug=False):
-    if os.getenv("CHAIN_DISABLE_PREWARM") == "1":
+    if _flag_enabled("CHAIN_DISABLE_PREWARM") or _flag_enabled("CHAIN_FAST_LOCAL"):
         return False
     if not debug:
         return True
@@ -106,6 +124,17 @@ def schedule_delayed_homepage_prewarm(app, debug=False):
 
     threading.Thread(target=delayed_prewarm, daemon=True).start()
     return True
+
+
+def format_datetime_filter(value):
+    if not value:
+        return ""
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except Exception:
+            return value
+    return value.strftime("%b %d, %Y") if hasattr(value, "strftime") else str(value)
 
 
 def create_app():
@@ -169,6 +198,57 @@ def create_app():
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(profile_bp)
+    app.add_template_filter(format_datetime_filter, "datetime")
+
+    @app.get("/api/profile/current")
+    def api_profile_current_alias():
+        from api_routes.profile_routes import api_current_profile
+        return api_current_profile()
+
+    if os.getenv("FLASK_ENV", "development") != "production":
+        @app.get("/dev/profile-debug")
+        def dev_profile_debug():
+            from flask import abort
+            from services.profile_service import get_current_profile, get_profile_bundle
+
+            def _scrub_mapping(value):
+                if isinstance(value, dict):
+                    scrubbed = {}
+                    for key, item in value.items():
+                        lower_key = str(key).lower()
+                        if any(token in lower_key for token in ("password", "token", "secret", "key", "cookie", "session")):
+                            scrubbed[key] = "[redacted]"
+                        else:
+                            scrubbed[key] = _scrub_mapping(item)
+                    return scrubbed
+                if isinstance(value, list):
+                    return [_scrub_mapping(item) for item in value]
+                return value
+
+            flask_env = os.getenv("FLASK_ENV", "development")
+            if flask_env == "production" or os.getenv("ENV") == "production":
+                abort(404)
+
+            raw_session = dict(session)
+            safe_session = {}
+            for key, value in raw_session.items():
+                lower_key = str(key).lower()
+                if any(token in lower_key for token in ("password", "token", "secret", "key", "cookie")):
+                    safe_session[key] = "[redacted]"
+                else:
+                    safe_session[key] = value
+
+            current_profile = get_current_profile()
+            bundle = get_profile_bundle(profile_id=current_profile["id"], viewer=current_profile) if current_profile and current_profile.get("id") else None
+
+            return jsonify({
+                "environment": flask_env,
+                "session": _scrub_mapping(safe_session),
+                "session_keys": sorted(list(raw_session.keys())),
+                "current_profile": _scrub_mapping(current_profile),
+                "profile_bundle": _scrub_mapping(bundle),
+            }), 200
+    app.register_blueprint(dashboard_bp)
     app.register_blueprint(matching_bp)
     app.register_blueprint(dating_bp)
     app.register_blueprint(message_bp)
@@ -283,23 +363,28 @@ def create_app():
                 "avatar_url": None,
             }
         
+        fast_local = _flag_enabled("CHAIN_FAST_LOCAL") and not _is_production_env()
+
         # Priority: auth_user_id in session
         if "auth_user_id" in session:
-            if session.get("profile_warning") or session.get("age_check_required"):
+            if fast_local or session.get("profile_warning") or session.get("age_check_required"):
                 current_profile = session_profile_stub()
             else:
                 current_profile = get_current_profile()
                 if not current_profile:
                     current_profile = session_profile_stub()
 
-        if current_profile and current_profile.get("id"):
+        if current_profile and current_profile.get("id") and not fast_local:
             from services.notification_engine import unread_count
             unread_count = unread_count(current_profile["id"])
             
             from services.wallet_engine import ensure_wallet
-            wallet = ensure_wallet(current_profile["id"])
-            if wallet:
-                wallet_balance = wallet.get("coin_balance", 0)
+            try:
+                wallet = ensure_wallet(current_profile["id"])
+                if wallet:
+                    wallet_balance = wallet.get("coin_balance", 0)
+            except Exception:
+                wallet_balance = 0
 
         return {
             "g_current": current_profile,

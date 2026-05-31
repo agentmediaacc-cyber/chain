@@ -2,7 +2,6 @@ import time
 
 from flask import Blueprint, jsonify, render_template, session, redirect, request
 from services.notification_engine import list_notifications, unread_count, mark_read, mark_all_read
-from services.profile_service import get_current_profile
 from api_routes.profile_routes import login_required
 
 notification_engine_bp = Blueprint("notification_engine", __name__)
@@ -11,6 +10,7 @@ _LOGGED_OUT_UNREAD_CACHE = {"expires_at": 0.0, "payload": {"count": 0}}
 @notification_engine_bp.route("/notifications/")
 @login_required
 def index():
+    from services.profile_service import get_current_profile
     profile = get_current_profile()
     notifications = list_notifications(profile['id']) if profile and profile.get("id") else []
     return render_template("notifications/index.html", notifications=notifications, profile=profile, setup_warning=bool(session.get("profile_warning")))
@@ -23,11 +23,17 @@ def api_unread_count():
             _LOGGED_OUT_UNREAD_CACHE["payload"] = {"count": 0}
             _LOGGED_OUT_UNREAD_CACHE["expires_at"] = now + 60
         return jsonify(_LOGGED_OUT_UNREAD_CACHE["payload"]), 200
-    profile = get_current_profile()
-    if not profile:
+
+    profile_id = session.get("profile_id")
+    if not profile_id:
         return jsonify({"count": 0}), 200
-    
-    response = jsonify({"count": unread_count(profile['id'])})
+
+    try:
+        count = unread_count(profile_id)
+    except Exception:
+        count = 0
+
+    response = jsonify({"count": count})
     # Instruct clients/proxies to cache for 10 seconds to debounce polling
     response.headers["Cache-Control"] = "public, max-age=10, stale-while-revalidate=30"
     return response, 200
