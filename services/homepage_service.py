@@ -1,5 +1,6 @@
 import time
 import threading
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
@@ -18,11 +19,11 @@ from services.profile_service import get_current_profile
 from services.wallet_service import ensure_wallet
 
 
-_CACHE_TTL_SECONDS = 30
-_EMPTY_CACHE_TTL_SECONDS = 15
-_QUERY_TIMEOUT_MS = 600
-_TOTAL_BUDGET_MS = 700
-_FAST_FALLBACK_MS = 400
+_CACHE_TTL_SECONDS = 300
+_EMPTY_CACHE_TTL_SECONDS = 60
+_QUERY_TIMEOUT_MS = 1500
+_TOTAL_BUDGET_MS = 3000
+_FAST_FALLBACK_MS = 2000
 _HOMEPAGE_TABLES = [
     "chain_profiles",
     "chain_posts",
@@ -40,6 +41,24 @@ _SHARED_FEED_CACHE_PREFIX = "chain_homepage_feed_v1"
 
 def _log(message):
     print(f"[homepage_service] {message}")
+
+
+def _fast_local_enabled():
+    return os.getenv("CHAIN_FAST_LOCAL") == "1" and os.getenv("FLASK_ENV", "development") != "production"
+
+
+def _empty_homepage_payload(issue=None):
+    issues = [issue] if issue else []
+    return {
+        "stories": [],
+        "live_rooms": [],
+        "recommended_profiles": [],
+        "trending_posts": [],
+        "dating_matches": [],
+        "reels": [],
+        "stats": {"stories": 0, "live_rooms": 0, "profiles": 0, "posts": 0, "reels": 0},
+        "issues": issues,
+    }
 
 
 def _log_outage_once(message):
@@ -133,16 +152,24 @@ def _table_columns(table_name):
     
     # 1. Quick cache check (no lock)
     if _SCHEMA_CACHE and _SCHEMA_CACHE.get("_expires_at", 0) > now:
+        _log(f"schema_cache_hit table={table_name} kind=columns")
         return _SCHEMA_CACHE.get(table_name, set())
 
     # 2. Lock for lookup
     with _SCHEMA_LOCK:
         # Re-check cache
         if _SCHEMA_CACHE and _SCHEMA_CACHE.get("_expires_at", 0) > now:
+            _log(f"schema_cache_hit table={table_name} kind=columns")
             return _SCHEMA_CACHE.get(table_name, set())
 
+        _log(f"schema_cache_miss table={table_name} kind=columns")
+        if _fast_local_enabled():
+            _log(f"schema_check_skipped_fast_local table={table_name} kind=columns")
+            _SCHEMA_CACHE = {"_expires_at": now + 600}
+            return set()
+
         # Initialize or refresh
-        new_cache = {"_expires_at": now + 300} # Cache schema for 5 mins
+        new_cache = {"_expires_at": now + 600} # Cache schema for at least 10 mins in dev
         
         try:
             # Try local memory/filesystem cache first
@@ -153,7 +180,7 @@ def _table_columns(table_name):
             
             # If missing anything, try a quick DB lookup
             if len(new_cache) < len(_HOMEPAGE_TABLES) + 1: # +1 for _expires_at
-                db_schemas = get_tables_columns(_HOMEPAGE_TABLES, timeout_ms=300)
+                db_schemas = get_tables_columns(_HOMEPAGE_TABLES, timeout_ms=1000)
                 for name, columns in db_schemas.items():
                     new_cache[name] = set(columns)
         except Exception as e:
@@ -463,7 +490,7 @@ def _load_profile_map(profile_ids):
     placeholders = ", ".join(["%s"] * len(unique_ids))
     where = _build_where(available, [f"id IN ({placeholders})"])
     query = f"SELECT {', '.join(columns)} FROM chain_profiles WHERE {' AND '.join(where)}"
-    rows, issue = _run_sql(f"profile_map:{len(unique_ids)}", query, unique_ids, timeout_ms=500)
+    rows, issue = _run_sql(f"profile_map:{len(unique_ids)}", query, unique_ids, timeout_ms=1000)
     if issue:
         pass
     return {row.get("id"): _normalize_profile(row) for row in rows if row.get("id")}
@@ -605,16 +632,12 @@ def build_homepage_payload(async_warm=False):
     if cached is not None:
         return cached
 
-    payload = {
-        "stories": [],
-        "live_rooms": [],
-        "recommended_profiles": [],
-        "trending_posts": [],
-        "dating_matches": [],
-        "reels": [],
-        "stats": {"stories": 0, "live_rooms": 0, "profiles": 0, "posts": 0, "reels": 0},
-        "issues": [],
-    }
+    if _fast_local_enabled():
+        payload = _empty_homepage_payload("fast_local_defaults")
+        set_cache(cache_key_str, payload, ttl=_EMPTY_CACHE_TTL_SECONDS)
+        return payload
+
+    payload = _empty_homepage_payload()
 
     # Fast exit if Neon circuit is open
     if is_circuit_open():
@@ -633,7 +656,7 @@ def build_homepage_payload(async_warm=False):
         if not cols: return []
         return fast_query(
             f"SELECT {', '.join(cols)} FROM chain_stories WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 12",
-            timeout_ms=300
+            timeout_ms=1000
         )
 
     def fetch_live():
@@ -641,7 +664,7 @@ def build_homepage_payload(async_warm=False):
         if not cols: return []
         return fast_query(
             f"SELECT {', '.join(cols)} FROM chain_live_rooms WHERE (is_live = TRUE OR status = 'live') AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 8",
-            timeout_ms=300
+            timeout_ms=1000
         )
 
     def fetch_profiles():
@@ -649,7 +672,7 @@ def build_homepage_payload(async_warm=False):
         if not cols: return []
         return fast_query(
             f"SELECT {', '.join(cols)} FROM chain_profiles WHERE is_creator = TRUE AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 10",
-            timeout_ms=300
+            timeout_ms=1000
         )
 
     def fetch_posts():
@@ -657,7 +680,7 @@ def build_homepage_payload(async_warm=False):
         if not cols: return []
         return fast_query(
             f"SELECT {', '.join(cols)} FROM chain_posts WHERE deleted_at IS NULL ORDER BY likes_count DESC NULLS LAST, created_at DESC LIMIT 8",
-            timeout_ms=300
+            timeout_ms=1000
         )
 
     def fetch_matches():
@@ -665,7 +688,7 @@ def build_homepage_payload(async_warm=False):
         if not cols: return []
         return fast_query(
             f"SELECT {', '.join(cols)} FROM chain_profiles WHERE dating_mode_enabled = TRUE AND deleted_at IS NULL ORDER BY random() LIMIT 8",
-            timeout_ms=300
+            timeout_ms=1000
         )
 
     def fetch_reels():
@@ -673,7 +696,7 @@ def build_homepage_payload(async_warm=False):
         if not cols: return []
         return fast_query(
             f"SELECT {', '.join(cols)} FROM chain_reels WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 8",
-            timeout_ms=300
+            timeout_ms=1000
         )
 
     tasks = {
@@ -750,7 +773,8 @@ def build_homepage_payload(async_warm=False):
         set_cache(cache_key_str, payload, ttl=_CACHE_TTL_SECONDS)
     elif "partial_fallback" in payload["issues"] or "neon: unavailable" in payload["issues"]:
         # Trigger async warm if we fell back
-        _EXECUTOR.submit(build_homepage_payload, async_warm=True)
+        if not _fast_local_enabled():
+            _EXECUTOR.submit(build_homepage_payload, async_warm=True)
 
     return payload
 

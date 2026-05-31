@@ -49,7 +49,9 @@ _DB_EXECUTOR = ThreadPoolExecutor(max_workers=POOL_MAX + 5, thread_name_prefix="
 
 # Caches
 _COLUMN_CACHE = {}
-_COLUMN_CACHE_TTL = 300
+_TABLE_EXISTS_CACHE = {}
+_COLUMN_CACHE_TTL = 600 if not _is_production_env() else 300
+_TABLE_EXISTS_CACHE_TTL = 600 if not _is_production_env() else 300
 _HEALTH_CACHE = {"expires_at": 0.0, "payload": None}
 
 class NeonError(Exception):
@@ -367,7 +369,17 @@ def get_table_columns(table_name: str, timeout_ms=5000):
     if table_name in _COLUMN_CACHE:
         entry = _COLUMN_CACHE[table_name]
         if now < entry["expires_at"]:
+            log_info("schema_cache_hit", table=table_name, kind="columns")
             return entry["columns"]
+
+    log_info("schema_cache_miss", table=table_name, kind="columns")
+    if not _is_production_env() and _flag_enabled("CHAIN_FAST_LOCAL"):
+        log_info("schema_check_skipped_fast_local", table=table_name, kind="columns")
+        _COLUMN_CACHE[table_name] = {
+            "columns": [],
+            "expires_at": now + _COLUMN_CACHE_TTL,
+        }
+        return []
 
     query = """
         SELECT a.attname as column_name
@@ -392,9 +404,31 @@ def is_circuit_open():
 
 def table_exists(table_name: str, timeout_ms=2000):
     """Checks if a table exists using a faster pg_class query."""
+    now = time.time()
+    if table_name in _TABLE_EXISTS_CACHE:
+        entry = _TABLE_EXISTS_CACHE[table_name]
+        if now < entry["expires_at"]:
+            log_info("schema_cache_hit", table=table_name, kind="table_exists")
+            return entry["exists"]
+
+    log_info("schema_cache_miss", table=table_name, kind="table_exists")
+    if not _is_production_env() and _flag_enabled("CHAIN_FAST_LOCAL"):
+        log_info("schema_check_skipped_fast_local", table=table_name, kind="table_exists")
+        assumed_exists = table_name in {"chain_profiles"}
+        _TABLE_EXISTS_CACHE[table_name] = {
+            "exists": assumed_exists,
+            "expires_at": now + _TABLE_EXISTS_CACHE_TTL,
+        }
+        return assumed_exists
+
     query = "SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = %s LIMIT 1"
     res = fast_query(query, (table_name,), timeout_ms=timeout_ms)
-    return bool(res)
+    exists = bool(res)
+    _TABLE_EXISTS_CACHE[table_name] = {
+        "exists": exists,
+        "expires_at": now + _TABLE_EXISTS_CACHE_TTL,
+    }
+    return exists
 
 def insert_row(table: str, payload: Dict[str, Any], returning: str = "id", timeout_ms: int = 2000):
     """Helper to insert a single row and return a column."""
