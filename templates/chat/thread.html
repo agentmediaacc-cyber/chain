@@ -194,7 +194,7 @@
             {% endif %}
         </div>
 
-        <form class="thread-form" method="POST" action="{{ url_for('chat.send_thread_message', thread_id=convo.id) }}">
+        <form class="thread-form" method="POST" action="/messages/api/messages/send">
             <input name="message" placeholder="Write a message..." autocomplete="off" required>
             <button type="submit">Send Message</button>
         </form>

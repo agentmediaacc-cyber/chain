@@ -1,4 +1,7 @@
 {% set own_profile = viewer and profile and viewer.id == profile.id %}
+{% set profile_location = profile.current_location or profile.location or profile.town or profile.region %}
+{% set profile_website = profile.website or profile.portfolio_url or profile.link_url %}
+{% set member_since = profile.created_at|datetime if profile.created_at else 'Recently joined' %}
 <section class="premium-hero">
     <!-- 1. Cover/Banner Image -->
     <div class="premium-cover">
@@ -50,23 +53,45 @@
                     <div class="verified-badge" title="Verified Creator">
                         <i class="fas fa-check-circle"></i>
                     </div>
+                    <span class="verified-status verified-status--ok"><i class="fas fa-shield-check"></i> Verified</span>
+                    {% else %}
+                    <span class="verified-status verified-status--pending"><i class="fas fa-shield-halved"></i> Not Verified</span>
                     {% endif %}
                     {% if profile.level %}
                     <span class="level-badge">LVL {{ profile.level }}</span>
                     {% endif %}
+                    {% if profile.rank %}
+                    <span class="level-badge">{{ profile.rank }}</span>
+                    {% endif %}
+                    {% if profile.is_premium %}
+                    <span class="premium-member-badge"><i class="fas fa-gem"></i> {{ profile.premium_tier|default('premium')|title }}</span>
+                    {% endif %}
                 </div>
                 <p class="username">@{{ profile.username }} <span class="pronouns">{{ profile.pronouns or '' }}</span></p>
+                {% if own_profile and (not profile.is_verified or not profile.email_verified) %}
+                <div class="profile-verification-warning">
+                    <strong>Email not verified.</strong>
+                    <span>Please verify your email to unlock full trust features.</span>
+                    {% if profile.email %}
+                    <form action="/auth/resend-confirmation" method="POST">
+                        <input type="hidden" name="email" value="{{ profile.email }}">
+                        <button type="submit">Resend confirmation</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endif %}
                 
                 <!-- 4. Bio & Meta -->
                 <p class="bio">{{ profile.bio or 'African next-generation creator.' }}</p>
                 
                 <div class="meta-row">
-                    {% if profile.location %}
-                    <span class="meta-item"><i class="fas fa-map-marker-alt"></i> {{ profile.location }}</span>
+                    {% if profile_location %}
+                    <span class="meta-item"><i class="fas fa-map-marker-alt"></i> {{ profile_location }}</span>
                     {% endif %}
-                    {% if profile.website %}
-                    <a href="{{ profile.website }}" target="_blank" class="meta-item link"><i class="fas fa-link"></i> {{ profile.website|replace('https://', '')|replace('http://', '') }}</a>
+                    {% if profile_website %}
+                    <a href="{{ profile_website }}" target="_blank" class="meta-item link"><i class="fas fa-link"></i> {{ profile_website|replace('https://', '')|replace('http://', '') }}</a>
                     {% endif %}
+                    <span class="meta-item"><i class="fas fa-calendar-alt"></i> Member since {{ member_since }}</span>
                     {% if presence and presence.status == 'online' %}
                     <span class="meta-item status-online"><i class="fas fa-circle"></i> Online Now</span>
                     {% else %}
@@ -74,21 +99,41 @@
                     {% endif %}
                 </div>
 
+                <div class="meta-row">
+                    <span class="meta-item"><i class="fas fa-link"></i> /profile/@{{ profile.username }}</span>
+                    <button type="button" class="meta-item link copy-link-btn" onclick="copyProfileLink()"><i class="fas fa-copy"></i> Copy Link</button>
+                </div>
+
                 <!-- 5. Stats Cluster -->
                 <div class="premium-stats-cluster">
                     <div class="stat-box">
-                        <strong>{{ followers_count or 0 }}</strong>
+                        <strong>{{ public_stats.followers if public_stats is defined else (followers_count or 0) }}</strong>
                         <span>Followers</span>
                     </div>
                     <div class="stat-box">
-                        <strong>{{ following_count or 0 }}</strong>
+                        <strong>{{ stats.following if stats is defined else (following_count or 0) }}</strong>
                         <span>Following</span>
                     </div>
                     <div class="stat-box">
-                        <strong>{{ friends_count or 0 }}</strong>
-                        <span>Friends</span>
+                        <strong>{{ profile.chain_score or 0 }}</strong>
+                        <span>CHAIN Score</span>
+                    </div>
+                    <div class="stat-box">
+                        <strong>{{ completion.percentage if completion is defined else (profile.profile_completion or 0) }}%</strong>
+                        <span>Completion</span>
                     </div>
                 </div>
+                {% if level is defined %}
+                <div class="profile-level-progress">
+                    <div class="level-progress-copy">
+                        <strong>{{ level.title }}</strong>
+                        <span>{{ level.score }} score • next {{ level.next_target }}</span>
+                    </div>
+                    <div class="level-progress-track">
+                        <span style="width: {{ level.progress_pct }}%"></span>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- 6. Action Buttons -->
@@ -97,19 +142,28 @@
                 <a href="/profile/edit" class="premium-btn secondary w-full"><i class="fas fa-edit"></i> Edit Profile</a>
                 <div class="action-row">
                     <a href="/wallet/" class="premium-btn glass flex-1"><i class="fas fa-wallet"></i> Wallet</a>
+                    <a href="/profile/security" class="premium-btn glass flex-1"><i class="fas fa-shield-halved"></i> Security</a>
+                    <a href="/profile/privacy" class="premium-btn glass flex-1"><i class="fas fa-user-shield"></i> Privacy</a>
                     <button class="premium-btn glass icon" onclick="shareProfile()"><i class="fas fa-share-alt"></i></button>
                 </div>
                 {% else %}
                 <div class="action-row main">
-                    <button class="premium-btn primary flex-1" id="follow-btn" data-profile-id="{{ profile.id }}">
+                    <button class="premium-btn primary flex-1" id="follow-btn" data-profile-id="{{ profile.id }}" data-following="{{ 'true' if is_following else 'false' }}">
                         {% if is_following %}Following{% else %}Follow{% endif %}
                     </button>
                     <a href="/messages/{{ thread_id or '' }}" class="premium-btn secondary flex-1"><i class="fas fa-comment"></i> Message</a>
                 </div>
                 <div class="action-row secondary">
+                    <button class="premium-btn glass flex-1" onclick="startAudioCall('{{ profile.id }}')"><i class="fas fa-phone-volume"></i> Audio Call</button>
                     <button class="premium-btn glass flex-1" onclick="startVideoCall('{{ profile.id }}')"><i class="fas fa-video"></i> Video Call</button>
                     <button class="premium-btn glass flex-1" onclick="openGiftModal('{{ profile.id }}')"><i class="fas fa-gift"></i> Send Gift</button>
-                    <button class="premium-btn glass icon" id="more-actions-btn"><i class="fas fa-ellipsis-h"></i></button>
+                    <button class="premium-btn glass flex-1" onclick="addFriend('{{ profile.id }}')"><i class="fas fa-user-plus"></i> Add Friend</button>
+                </div>
+                <div class="action-row secondary">
+                    <button class="premium-btn glass flex-1" onclick="openContactCard()"><i class="fas fa-address-card"></i> Contact</button>
+                    <button class="premium-btn glass flex-1" onclick="subscribeToCreator('{{ profile.username }}')"><i class="fas fa-gem"></i> Subscribe</button>
+                    <button class="premium-btn glass flex-1" onclick="bookCreator('{{ profile.username }}')"><i class="fas fa-calendar-check"></i> Book</button>
+                    <button class="premium-btn glass icon" onclick="shareProfile()"><i class="fas fa-share-alt"></i></button>
                 </div>
                 {% endif %}
             </div>
@@ -168,6 +222,11 @@
         z-index: 10;
         margin-top: -80px;
     }
+    .profile-level-progress { margin-top: 18px; max-width: 520px; }
+    .level-progress-copy { display:flex; justify-content:space-between; gap:12px; color:var(--chain-muted); font-size:12px; margin-bottom:8px; }
+    .level-progress-track { height:10px; border-radius:999px; background:rgba(255,255,255,0.08); overflow:hidden; }
+    .level-progress-track span { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg, var(--chain-primary), var(--chain-secondary)); }
+    .copy-link-btn { border: none; background: transparent; cursor: pointer; }
 
     .premium-avatar-container {
         position: relative;
@@ -371,4 +430,30 @@
         // Implementation for gift modal
         alert("Gifting feature coming soon!");
     }
+
+    document.getElementById('follow-btn')?.addEventListener('click', async function () {
+        const profileId = this.dataset.profileId;
+        if (!profileId) return;
+        this.disabled = true;
+        try {
+            const response = await fetch(`/profile/${profileId}/follow`, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' }
+            });
+            const payload = await response.json();
+            if (!response.ok || payload.status !== 'success') {
+                throw new Error(payload.error || payload.message || 'Follow action failed.');
+            }
+            this.dataset.following = payload.following ? 'true' : 'false';
+            this.textContent = payload.following ? 'Following' : 'Follow';
+            const followerStat = document.querySelector('.premium-stats-cluster .stat-box strong');
+            if (followerStat && payload.followers_count !== undefined) {
+                followerStat.textContent = payload.followers_count;
+            }
+        } catch (error) {
+            console.error('Follow action failed:', error);
+        } finally {
+            this.disabled = false;
+        }
+    });
 </script>

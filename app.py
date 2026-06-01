@@ -3,7 +3,7 @@ import threading
 import time
 import uuid
 from datetime import datetime, timezone, timedelta
-from flask import Flask, g, jsonify, redirect, render_template, request, session, send_from_directory
+from flask import Flask, g, jsonify, redirect, render_template, request, session, send_from_directory, url_for
 from werkzeug.exceptions import HTTPException
 from engines.cache_engine import init_cache
 from engines.performance_engine import timed
@@ -275,6 +275,7 @@ def create_app():
     app.register_blueprint(engagement_bp)
     app.register_blueprint(metrics_bp)
     app.register_blueprint(post_bp)
+    app.register_blueprint(creator_bp)
 
     for bp in api_v1_blueprints:
         app.register_blueprint(bp, url_prefix=f"/api/v1{bp.url_prefix}")

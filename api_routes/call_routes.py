@@ -30,7 +30,7 @@ def init_call():
         return render_template("calls/video.html", call=call, profile=profile, role='caller')
     
     flash("Could not start call.", "error")
-    return redirect(request.referrer or url_for("chat_v2.inbox"))
+    return redirect(request.referrer or url_for("messages.inbox"))
 
 @call_bp.route("/<call_id>/answer", methods=["POST"])
 @login_required

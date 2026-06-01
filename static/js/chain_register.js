@@ -10,12 +10,41 @@
   const progressBar = document.getElementById("chain-register-progress-bar");
   const country = document.getElementById("register_country");
   const region = document.getElementById("register_region");
+  const regionText = document.getElementById("register_region_text");
   const town = document.getElementById("register_town");
+  const townSelect = document.getElementById("register_town_select");
+  const phoneCode = document.getElementById("register_phone_code");
   const password = document.getElementById("register_password");
   const confirmPassword = document.getElementById("register_confirm_password");
   const confirmStatus = document.getElementById("confirm_password_status");
   const availabilityState = { username: false, email: false, phone: false };
   let stepIndex = 0;
+
+  const NAMIBIA_REGIONS = [
+    "Erongo",
+    "Hardap",
+    "//Karas",
+    "Kavango East",
+    "Kavango West",
+    "Khomas",
+    "Kunene",
+    "Ohangwena",
+    "Omaheke",
+    "Omusati",
+    "Oshana",
+    "Oshikoto",
+    "Otjozondjupa",
+    "Zambezi"
+  ];
+  console.log("[CHAIN register] Namibia regions loaded", NAMIBIA_REGIONS.length);
+  console.log("[CHAIN register] region field found", region);
+
+  const availabilityReady = (field, value) => {
+    if (field === "email") return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    if (field === "phone") return value.replace(/\D/g, "").length >= 6;
+    if (field === "username") return value.trim().length >= 3;
+    return Boolean(value.trim());
+  };
 
   const updateStep = () => {
     steps.forEach((step, index) => step.classList.toggle("is-active", index === stepIndex));
@@ -58,16 +87,17 @@
       window.clearTimeout(timer);
       timer = window.setTimeout(async () => {
         const input = document.getElementById(`register_${field}`);
-        if (!input?.value.trim()) return;
+        const value = input?.value.trim() || "";
+        if (!availabilityReady(field, value)) return;
         try {
-          const params = new URLSearchParams({ field, value: input.value.trim(), town: town?.value || "" });
+          const params = new URLSearchParams({ field, value, town: town?.value || "" });
           const response = await fetch(`/auth/check-availability?${params.toString()}`);
           const payload = await response.json();
           setAvailability(field, payload);
         } catch (e) {
           console.error("Availability check failed", e);
         }
-      }, 500);
+      }, 700);
     };
   };
 
@@ -109,38 +139,105 @@
     const passwordsMatch = password.value && password.value === confirmPassword.value && password.value.length >= 8;
     
     // Core fields check
-    const required = Array.from(form.querySelectorAll("input[required], select[required]"));
+    const required = Array.from(form.querySelectorAll("input[required], select[required]")).filter((input) => !input.disabled && !input.hidden);
     const allFilled = required.every(input => input.value.trim() !== "");
 
     const canSubmit = allFilled && passwordsMatch && terms && human;
     submitBtn.disabled = !canSubmit;
     
-    if (submitBtn.disabled && stepIndex === 1) {
+    if (submitBtn.disabled && stepIndex === steps.length - 1) {
         // Optional: show some hint why disabled if needed
     }
   };
 
+  const escapeOption = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[char]));
+
+  const selectedCountryRecord = () => window.CHAIN_LOCATIONS?.find((item) => item.country === country.value);
+
   const renderCountries = () => {
     if (!country || !window.CHAIN_LOCATIONS) return;
+    console.log("Loading country options...");
     country.innerHTML = ['<option value="">Select country</option>']
-      .concat(window.CHAIN_LOCATIONS.map((item) => `<option value="${item.country}">${item.country}</option>`))
+      .concat(window.CHAIN_LOCATIONS.map((item) => `<option value="${escapeOption(item.country)}">${escapeOption(item.country)}</option>`))
       .join("");
     
-    const selected = country.dataset.selected;
-    if (selected) country.value = selected;
-    else country.value = "Namibia";
+    const selected = country.dataset.selected || window.CHAIN_DEFAULT_COUNTRY || "Namibia";
+    country.value = selected;
+    if (!country.value) country.value = "Namibia";
+    console.log("Country set to:", country.value);
+    renderPhoneCodes();
     renderRegions();
   };
 
-  const renderRegions = () => {
-    const record = window.CHAIN_LOCATIONS?.find((item) => item.country === country.value);
-    const regions = record?.regions || [];
-    region.innerHTML = ['<option value="">Select region/state</option>']
-      .concat(regions.map((item) => `<option value="${item}">${item}</option>`))
+  const renderPhoneCodes = () => {
+    if (!phoneCode || !window.CHAIN_LOCATIONS) return;
+    const current = selectedCountryRecord();
+    phoneCode.innerHTML = window.CHAIN_LOCATIONS
+      .filter((item) => item.phoneCode)
+      .map((item) => `<option value="${escapeOption(item.phoneCode)}">${escapeOption(item.country)} ${escapeOption(item.phoneCode)}</option>`)
       .join("");
+    const selected = phoneCode.dataset.selected || current?.phoneCode || "+264";
+    phoneCode.value = selected;
+    console.log("Phone code set to:", phoneCode.value);
+  };
+
+  const renderRegions = () => {
+    const isNamibia = country.value === "Namibia" || (selectedCountryRecord()?.code === "NA");
+    const regions = isNamibia ? NAMIBIA_REGIONS : [];
     
-    const selected = region.dataset.selected;
-    if (selected) region.value = selected;
+    console.log(`[CHAIN register] Rendering regions for ${country.value}. isNamibia: ${isNamibia}`);
+
+    if (isNamibia) {
+      region.hidden = false;
+      region.disabled = false;
+      region.name = "region";
+      region.required = true;
+      regionText.hidden = true;
+      regionText.disabled = true;
+      regionText.name = "";
+      regionText.required = false;
+      
+      region.innerHTML = ['<option value="">Select region/state</option>']
+        .concat(regions.map((item) => `<option value="${escapeOption(item)}">${escapeOption(item)}</option>`))
+        .join("");
+      
+      const selected = region.dataset.selected;
+      if (selected && NAMIBIA_REGIONS.includes(selected)) {
+          region.value = selected;
+      }
+    } else {
+      region.hidden = true;
+      region.disabled = true;
+      region.name = "";
+      region.required = false;
+      regionText.hidden = false;
+      regionText.disabled = false;
+      regionText.name = "region";
+      regionText.required = false; // Optional for other countries
+      regionText.value = region.dataset.selected || regionText.value || "";
+    }
+    renderTowns();
+    validateSubmit();
+  };
+
+  const renderTowns = () => {
+    // Reverted to simple free-text input as per "Fix ONLY Region / State" directive
+    if (townSelect) {
+      townSelect.hidden = true;
+      townSelect.disabled = true;
+      townSelect.name = "";
+      townSelect.required = false;
+    }
+    town.hidden = false;
+    town.disabled = false;
+    town.name = "town";
+    town.required = true;
   };
 
   form.querySelectorAll(".toggle-password").forEach((button) => {
@@ -167,11 +264,23 @@
     validateConfirmPassword();
   });
   confirmPassword?.addEventListener("input", validateConfirmPassword);
-  country?.addEventListener("change", renderRegions);
+  country?.addEventListener("change", () => {
+    renderPhoneCodes();
+    renderRegions();
+  });
+  region?.addEventListener("change", renderTowns);
+  regionText?.addEventListener("input", renderTowns);
   form.querySelectorAll("input, select").forEach((input) => input.addEventListener("input", validateSubmit));
   form.querySelectorAll("input[type='checkbox']").forEach((input) => input.addEventListener("change", validateSubmit));
   
   nextBtn?.addEventListener("click", () => {
+    const currentRequired = Array.from(steps[stepIndex].querySelectorAll("input[required], select[required]")).filter((input) => !input.disabled && !input.hidden);
+    const firstEmpty = currentRequired.find((input) => !input.value.trim() || (input.type === "checkbox" && !input.checked));
+    if (firstEmpty) {
+      firstEmpty.focus();
+      firstEmpty.reportValidity?.();
+      return;
+    }
     stepIndex = Math.min(steps.length - 1, stepIndex + 1);
     updateStep();
   });

@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function toggleFollow(profileId, action) {
-    const url = `/${action}/${profileId}`;
+    const url = `/profile/${profileId}/follow`;
     fetch(url, {
         method: 'POST',
         headers: {

@@ -1,219 +1,461 @@
 {% extends "profile/base_profile.html" %}
 
 {% block profile_body %}
-<div class="premium-profile-body">
-    <div class="premium-content-container">
-        <!-- AI Assistant Widget -->
-        <aside class="premium-sidebar">
-            <div class="premium-glass-card ai-widget">
-                <div class="ai-head">
-                    <div class="ai-orb"></div>
-                    <strong>CHAIN AI</strong>
-                </div>
-                <p>Hi! I'm your creator assistant. I can help you with your bio, captions, or recommend content.</p>
-                <button class="ai-action-btn">Ask AI</button>
-            </div>
+{% set own_profile = viewer and profile and viewer.id == profile.id %}
+{% set stats_data = stats or {} %}
+{% set content_data = content or {} %}
+{% set wallet_data = wallet or {} %}
+{% set creator_data = creator or {} %}
+{% set marketplace_data = marketplace or {} %}
+{% set dating_data = dating or {} %}
+{% set portfolio_data = portfolio or {} %}
+{% set ai_data = ai or {} %}
+{% set live_data = live or {} %}
+{% set calls_data = calls or {} %}
+{% set reputation_data = reputation or {} %}
+{% set completion_data = completion or {'percentage': 0, 'missing_fields': []} %}
+{% set public_numbers = public_stats or {} %}
+{% set level_data = level or {'title': 'New Member', 'score': 0, 'next_target': 10, 'progress_pct': 0} %}
+{% set pinned_data = pinned or {'posts': [], 'reels': [], 'products': []} %}
+{% set contact_data = contact or {} %}
+{% set permissions_data = permissions or {} %}
+{% set theme_choices = theme_options or [] %}
+{% set achievements_list = achievements or [] %}
+{% set posts = content_data.get('posts', []) %}
+{% set reels = content_data.get('reels', []) %}
+{% set stories = content_data.get('stories', []) %}
+{% set rooms = content_data.get('rooms', []) %}
+{% set products = marketplace_data.get('items', []) %}
+{% set skills = portfolio_data.get('skills', []) or ['Storytelling', 'Community', 'Content Creation'] %}
+{% set completion_missing = completion_data.get('missing_fields', []) %}
+{% set profile_location = profile.current_location or profile.location or profile.town or profile.region or 'Namibia' %}
+{% set member_since = profile.created_at|datetime if profile.created_at else 'Recently' %}
 
-            <!-- Creator Stats Card -->
-            {% if profile.id == viewer.id %}
-            <div class="premium-glass-card creator-mini-dash">
-                <h3>Creator Earnings</h3>
-                <div class="earnings-row">
-                    <strong>N$ {{ stats.earnings or '0.00' }}</strong>
-                    <a href="/wallet/" class="withdraw-link">Withdraw</a>
+<div class="profile-dashboard-grid">
+    <div class="profile-main-column">
+        {% if own_profile and (not profile.is_verified or not profile.email_verified) %}
+        <section class="glass-panel compact verification-warning-card">
+            <div class="panel-head">
+                <div>
+                    <p>ACCOUNT TRUST</p>
+                    <h2>Your account is not verified yet.</h2>
                 </div>
-                <div class="mini-metrics">
-                    <div class="m-item"><span>Views</span><strong>{{ stats.views or 0 }}</strong></div>
-                    <div class="m-item"><span>Gifts</span><strong>{{ stats.gifts_received or 0 }}</strong></div>
-                </div>
+                <span class="pill"><i class="fas fa-shield-halved"></i> Not Verified</span>
             </div>
+            <p class="hero-bio">Email not verified. Please verify your email to unlock full trust features.</p>
+            {% if profile.email %}
+            <form action="/auth/resend-confirmation" method="POST" class="profile-action-row">
+                <input type="hidden" name="email" value="{{ profile.email }}">
+                <button class="profile-action-btn accent" type="submit"><i class="fas fa-envelope"></i> Resend confirmation</button>
+            </form>
             {% endif %}
-        </aside>
-
-        <!-- Main Content Area -->
-        <main class="premium-main-content">
-            <!-- Posts Tab Content -->
-            <div id="posts-content" class="tab-content">
-                <div class="content-grid">
-                    {% for post in content.posts %}
-                    <article class="premium-glass-card post-card">
-                        {% if post.media_url %}
-                        <div class="post-media">
-                            <img src="{{ post.media_url }}" alt="Post content" loading="lazy">
-                        </div>
-                        {% endif %}
-                        <div class="post-info">
-                            <p>{{ post.caption or post.body }}</p>
-                            <div class="post-meta">
-                                <span><i class="far fa-heart"></i> {{ post.likes_count }}</span>
-                                <span><i class="far fa-comment"></i> {{ post.comments_count }}</span>
-                            </div>
-                        </div>
-                    </article>
-                    {% else %}
-                    <div class="empty-tab-state">
-                        <i class="fas fa-feather-alt"></i>
-                        <p>No posts to show yet.</p>
-                    </div>
-                    {% endfor %}
+        </section>
+        {% endif %}
+        <section id="social-feed-content" class="glass-panel tab-content">
+            <div class="panel-head">
+                <div>
+                    <p>SUPER APP PROFILE</p>
+                    <h2>Social Feed</h2>
                 </div>
+                <span class="pill"><i class="fas fa-star"></i> {{ profile.chain_score or 0 }} CHAIN Score</span>
             </div>
-
-            <!-- Reels Tab Content -->
-            <div id="reels-content" class="tab-content" style="display: none;">
-                <div class="reels-grid">
-                    {% for reel in content.reels %}
-                    <div class="reel-thumb premium-glass-card" onclick="window.location.href='/reels/{{ reel.id }}'">
-                        <img src="{{ reel.thumbnail_url or reel.media_url }}" alt="Reel">
-                        <div class="reel-overlay">
-                            <span><i class="fas fa-play"></i> {{ reel.views_count }}</span>
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="empty-tab-state">
-                        <i class="fas fa-film"></i>
-                        <p>No reels captured yet.</p>
-                    </div>
-                    {% endfor %}
-                </div>
+            <div class="hero-kicker">
+                <span class="pill"><i class="fas fa-trophy"></i> {{ level_data.title }}</span>
+                <span class="pill"><i class="fas fa-shield-heart"></i> Trust {{ reputation_data.trust_score or 0 }}</span>
+                <span class="pill"><i class="fas fa-badge-check"></i> {{ 'Verified' if profile.is_verified else 'Not Verified' }}</span>
+                <span class="pill"><i class="fas fa-chart-line"></i> {{ completion_data.percentage or 0 }}% complete</span>
             </div>
-
-            <!-- Live Tab Content -->
-            <div id="live-content" class="tab-content" style="display: none;">
-                <div class="live-history">
-                    {% for room in content.rooms %}
-                    <div class="live-history-card premium-glass-card">
-                        <div class="l-info">
-                            <strong>{{ room.title }}</strong>
-                            <span>{{ room.category }} · {{ room.created_at|datetime }}</span>
-                        </div>
-                        <div class="l-stats">
-                            <span><i class="fas fa-users"></i> {{ room.peak_viewers or 0 }}</span>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact">
+                    <div class="panel-head">
+                        <div>
+                            <p>PROFILE HEADER</p>
+                            <h2>Dynamic Summary</h2>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="empty-tab-state">
-                        <i class="fas fa-video-slash"></i>
-                        <p>No past live streams.</p>
+                    <div class="creator-list">
+                        <div><strong>Display name</strong><span>{{ profile.display_name or profile.full_name or profile.username }}</span></div>
+                        <div><strong>Username</strong><span>@{{ profile.username }}</span></div>
+                        <div><strong>Member since</strong><span>{{ member_since }}</span></div>
+                        <div><strong>Location</strong><span>{{ profile_location }}</span></div>
+                        <div><strong>Bio</strong><span>{{ profile.bio or 'No bio added yet.' }}</span></div>
+                        <div><strong>Website</strong><span>{{ profile.website or profile.portfolio_url or 'Not added' }}</span></div>
                     </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- About Tab Content -->
-            <div id="about-content" class="tab-content" style="display: none;">
-                <div class="about-grid">
-                    <section class="premium-glass-card about-section">
-                        <h3>About {{ profile.full_name or profile.username }}</h3>
-                        <p>{{ profile.bio or 'This user hasn\'t added a bio yet.' }}</p>
-                        <hr class="premium-hr">
-                        <div class="about-details">
-                            <div class="d-item"><strong>Joined</strong> <span>{{ profile.created_at|datetime }}</span></div>
-                            <div class="d-item"><strong>Category</strong> <span>{{ profile.creator_category or 'Member' }}</span></div>
-                            <div class="d-item"><strong>Location</strong> <span>{{ profile.location or 'Global' }}</span></div>
+                </article>
+                <article class="glass-panel compact">
+                    <div class="panel-head">
+                        <div>
+                            <p>PUBLIC STATISTICS</p>
+                            <h2>Audience</h2>
                         </div>
+                    </div>
+                    <section class="profile-stats-grid">
+                        <article class="stat-card"><b>{{ public_numbers.posts or 0 }}</b><span>Posts</span></article>
+                        <article class="stat-card"><b>{{ public_numbers.followers or 0 }}</b><span>Followers</span></article>
+                        <article class="stat-card"><b>{{ public_numbers.reels or 0 }}</b><span>Reels</span></article>
+                        <article class="stat-card"><b>{{ public_numbers.likes or 0 }}</b><span>Likes</span></article>
                     </section>
+                    <section class="profile-stats-grid">
+                        <article class="stat-card"><b>{{ marketplace_data.items_sold or 0 }}</b><span>Products Sold</span></article>
+                        <article class="stat-card"><b>{{ creator_data.live_viewers or 0 }}</b><span>Live Viewers</span></article>
+                        <article class="stat-card"><b>{{ creator_data.subscribers or 0 }}</b><span>Subscribers</span></article>
+                        <article class="stat-card"><b>{{ creator_data.gifts_received or 0 }}</b><span>Gifts</span></article>
+                    </section>
+                </article>
+            </div>
+            <div class="panel-head" style="margin-top:24px;">
+                <div>
+                    <p>PINNED CONTENT</p>
+                    <h2>Featured Highlights</h2>
                 </div>
             </div>
-        </main>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact">
+                    <h3>Pinned Posts</h3>
+                    {% if pinned_data.posts %}
+                    <div class="creator-list">
+                        {% for post in pinned_data.posts %}
+                        <div><strong>{{ post.caption or post.body or 'Pinned post' }}</strong><span>{{ post.created_at|datetime if post.created_at else 'Recent' }}</span></div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="hero-bio">No pinned posts yet.</p>
+                    {% endif %}
+                </article>
+                <article class="glass-panel compact">
+                    <h3>Pinned Reels</h3>
+                    {% if pinned_data.reels %}
+                    <div class="creator-list">
+                        {% for reel in pinned_data.reels %}
+                        <div><strong>{{ reel.caption or 'Pinned reel' }}</strong><span>{{ reel.created_at|datetime if reel.created_at else 'Recent' }}</span></div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="hero-bio">No pinned reels yet.</p>
+                    {% endif %}
+                </article>
+                <article class="glass-panel compact">
+                    <h3>Pinned Products</h3>
+                    {% if pinned_data.products %}
+                    <div class="creator-list">
+                        {% for item in pinned_data.products %}
+                        <div><strong>{{ item.title or 'Pinned product' }}</strong><span>{{ item.price_coins or item.price or 'Price pending' }}</span></div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="hero-bio">No pinned products yet.</p>
+                    {% endif %}
+                </article>
+            </div>
+        </section>
+
+        <section id="reels-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>VIDEO LAYER</p><h2>Reels</h2></div><span class="pill"><i class="fas fa-film"></i> {{ reels|length }}</span></div>
+            {% if reels %}
+            <div class="content-grid profile-media-grid profile-reel-grid">
+                {% for reel in reels %}
+                <article class="content-card profile-content-card">
+                    {% if reel.thumbnail_url or reel.media_url %}<img src="{{ reel.thumbnail_url or reel.media_url }}" alt="{{ reel.caption or 'Reel' }}">{% endif %}
+                    <h3>{{ reel.caption or 'Untitled reel' }}</h3>
+                    <small>{{ reel.created_at|datetime if reel.created_at else 'Recent' }}</small>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            {% set icon='fa-film' %}{% set title='No reels yet' %}{% set message='Reels appear here once published.' %}{% set action_href='/reels/upload' if own_profile else None %}{% set action_label='Upload Reel' if own_profile else None %}{% include "profile/partials/profile_empty_state.html" %}
+            {% endif %}
+        </section>
+
+        <section id="stories-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>HIGHLIGHTS</p><h2>Stories</h2></div><span class="pill"><i class="fas fa-circle-notch"></i> {{ stories|length }}</span></div>
+            <div class="chip-row">
+                {% for highlight in story_highlights or [] %}
+                <span><i class="fas fa-circle"></i> {{ highlight }}</span>
+                {% endfor %}
+            </div>
+            {% if stories %}
+            <div class="story-grid">
+                {% for story in stories %}
+                <article class="story-card">
+                    {% if story.media_url %}<img src="{{ story.media_url }}" alt="{{ story.caption or 'Story' }}">{% endif %}
+                    <b>{{ story.caption or 'Story update' }}</b>
+                    <small>{{ story.created_at|datetime if story.created_at else 'Recent' }}</small>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            {% set icon='fa-circle-notch' %}{% set title='No stories yet' %}{% set message='Highlights and stories show here.' %}{% set action_href='/status/create' if own_profile else None %}{% set action_label='Create Story' if own_profile else None %}{% include "profile/partials/profile_empty_state.html" %}
+            {% endif %}
+        </section>
+
+        <section id="live-streams-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>LIVE STREAMING</p><h2>Live Streams</h2></div><span class="pill"><i class="fas fa-broadcast-tower"></i> HD Streaming</span></div>
+            <div class="chip-row">
+                <span><i class="fas fa-user-plus"></i> Invite Guest</span>
+                <span><i class="fas fa-gift"></i> Live Gifts</span>
+                <span><i class="fas fa-poll"></i> Live Polls</span>
+                <span><i class="fas fa-robot"></i> AI Moderation</span>
+                <span><i class="fas fa-store"></i> Live Shopping</span>
+            </div>
+            {% if rooms %}
+            <div class="live-room-list">
+                {% for room in rooms %}
+                <a class="live-room-card" href="/live/room/{{ room.id }}">
+                    <div><b>{{ room.title or 'Live room' }}</b><span>{{ room.category or 'Creator live' }}</span></div>
+                    <div><b>{{ room.viewer_count or 0 }}</b><span>{{ room.status or 'scheduled' }}</span></div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            {% set icon='fa-video-slash' %}{% set title='No live streams yet' %}{% set message='Go live, invite guests, and attach your storefront here.' %}{% set action_href=live_data.go_live_url or '/live/studio' %}{% set action_label='Go Live' %}{% include "profile/partials/profile_empty_state.html" %}
+            {% endif %}
+        </section>
+
+        <section id="audio-calls-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>COMMUNICATION</p><h2>Audio Calls</h2></div><span class="pill"><i class="fas fa-microphone-lines"></i> HD Audio</span></div>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact"><h3>Audio Features</h3><div class="creator-list"><div><strong>Audio Call</strong><span>{{ calls_data.audio_call_url or '/calls/recent' }}</span></div><div><strong>Group Audio</strong><span>{{ 'Enabled' if calls_data.group_audio else 'Unavailable' }}</span></div><div><strong>Noise Cancellation</strong><span>{{ 'On' if calls_data.noise_cancellation else 'Off' }}</span></div><div><strong>Echo Cancellation</strong><span>{{ 'On' if calls_data.echo_cancellation else 'Off' }}</span></div></div></article>
+                <article class="glass-panel compact"><h3>Voice Notes 2.0</h3><div class="creator-list"><div><strong>Voice Notes</strong><span>{{ 'Enabled' if calls_data.voice_notes else 'Unavailable' }}</span></div><div><strong>Transcription</strong><span>{{ 'On' if calls_data.transcription else 'Off' }}</span></div><div><strong>Translation</strong><span>{{ 'On' if calls_data.translation else 'Off' }}</span></div><div><strong>Summary</strong><span>{{ 'On' if calls_data.summary else 'Off' }}</span></div></div></article>
+            </div>
+        </section>
+
+        <section id="video-calls-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>COMMUNICATION</p><h2>Video Calls</h2></div><span class="pill"><i class="fas fa-video"></i> Premium Video</span></div>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact"><h3>Video Features</h3><div class="creator-list"><div><strong>Video Call</strong><span>{{ calls_data.video_call_url or '/calls/recent' }}</span></div><div><strong>Screen Share</strong><span>{{ 'Enabled' if calls_data.screen_share else 'Unavailable' }}</span></div><div><strong>Watch Together</strong><span>{{ 'Enabled' if calls_data.watch_together else 'Unavailable' }}</span></div><div><strong>Background Blur</strong><span>{{ 'On' if calls_data.background_blur else 'Off' }}</span></div></div></article>
+                <article class="glass-panel compact"><h3>AI Call Tools</h3><div class="creator-list"><div><strong>Live Subtitles</strong><span>{{ 'On' if calls_data.ai_subtitles else 'Off' }}</span></div><div><strong>Live Translation</strong><span>{{ 'On' if calls_data.translation else 'Off' }}</span></div><div><strong>AI Notes</strong><span>{{ 'On' if calls_data.ai_notes else 'Off' }}</span></div><div><strong>Meeting Summary</strong><span>{{ 'On' if calls_data.summary else 'Off' }}</span></div></div></article>
+            </div>
+        </section>
+
+        <section id="wallet-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>PAYMENTS</p><h2>Wallet</h2></div><span class="pill premium-pill"><i class="fas fa-coins"></i> Secure Payments</span></div>
+            <section class="profile-stats-grid">
+                <article class="stat-card"><b>N$ {{ '%.2f'|format(wallet_data.coin_balance or 0) }}</b><span>Balance</span></article>
+                <article class="stat-card"><b>N$ {{ '%.2f'|format(wallet_data.gift_earnings or 0) }}</b><span>Gifts</span></article>
+                <article class="stat-card"><b>N$ {{ '%.2f'|format(wallet_data.pending_withdrawal or 0) }}</b><span>Pending</span></article>
+                <article class="stat-card"><b>{{ creator_data.subscribers or 0 }}</b><span>Subscribers</span></article>
+            </section>
+            <div class="profile-action-row">
+                <a class="profile-action-btn" href="/wallet/"><i class="fas fa-arrow-up"></i> Withdraw</a>
+                <a class="profile-action-btn accent" href="/wallet/"><i class="fas fa-plus"></i> Deposit / Top Up</a>
+                <a class="profile-action-btn subtle" href="/wallet/"><i class="fas fa-paper-plane"></i> Send</a>
+                <a class="profile-action-btn subtle" href="/wallet/"><i class="fas fa-download"></i> Receive</a>
+            </div>
+        </section>
+
+        <section id="marketplace-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>SELLER HUB</p><h2>Marketplace</h2></div><span class="pill"><i class="fas fa-store"></i> {{ marketplace_data.items_sold or 0 }} sold</span></div>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact"><h3>Seller Panel</h3><div class="creator-list"><div><strong>Items Sold</strong><span>{{ marketplace_data.items_sold or 0 }}</span></div><div><strong>Rating</strong><span>{{ marketplace_data.rating or 0 }}</span></div><div><strong>Orders</strong><span>{{ marketplace_data.orders or 0 }}</span></div><div><strong>Revenue</strong><span>{{ marketplace_data.revenue or 0 }}</span></div></div></article>
+                <article class="glass-panel compact"><h3>Featured Products</h3>{% if marketplace_data.featured_products %}<div class="creator-list">{% for item in marketplace_data.featured_products %}<div><strong>{{ item.title or 'Featured product' }}</strong><span>{{ item.price_coins or item.price or 'Price pending' }}</span></div>{% endfor %}</div>{% else %}<p class="hero-bio">No featured products yet.</p>{% endif %}</article>
+            </div>
+        </section>
+
+        <section id="dating-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>DATING LAYER</p><h2>Dating</h2></div><span class="pill"><i class="fas fa-heart"></i> {{ 'On' if dating_data.enabled else 'Off' }}</span></div>
+            <div class="premium-tier-banner">
+                <div><h3>{{ 'Dating mode enabled' if dating_data.enabled else 'Dating mode preview' }}</h3><p>{{ profile.relationship_status or 'Relationship status is private.' }}</p></div>
+                <div class="metric-stack"><div><span>Compatibility</span><strong>{{ dating_data.compatibility_score or 0 }}</strong></div><div><span>Trust Score</span><strong>{{ dating_data.trust_score or 0 }}</strong></div><div><span>Looking For</span><strong>{{ (dating_data.looking_for or ['Not set'])|join(', ') }}</strong></div></div>
+            </div>
+        </section>
+
+        <section id="business-page-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>BUSINESS</p><h2>Business Page</h2></div><span class="pill"><i class="fas fa-briefcase"></i> Services</span></div>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact"><h3>Business Services</h3><div class="creator-list"><div><strong>Products</strong><span>{{ marketplace_data.get('items', [])|length }}</span></div><div><strong>Services</strong><span>{{ portfolio_data.businesses|length if portfolio_data.businesses else 0 }}</span></div><div><strong>Bookings</strong><span>Available</span></div><div><strong>Reviews</strong><span>{{ reputation_data.transaction_reliability or 0 }}%</span></div></div></article>
+                <article class="glass-panel compact"><h3>Live Support</h3><div class="creator-list"><div><strong>Payments</strong><span>Enabled</span></div><div><strong>Live Support</strong><span>Available</span></div><div><strong>Secure Checkout</strong><span>Protected</span></div><div><strong>Storefront</strong><span><a href="/marketplace/">Open</a></span></div></div></article>
+            </div>
+        </section>
+
+        <section id="portfolio-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>PROFESSIONAL</p><h2>Portfolio</h2></div><span class="pill"><i class="fas fa-folder-open"></i> Skills & CV</span></div>
+            <div class="chip-row">
+                {% for skill in skills %}<span>{{ skill }}</span>{% endfor %}
+            </div>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact"><h3>Projects & Certificates</h3><div class="creator-list"><div><strong>Projects</strong><span>{{ portfolio_data.projects|length if portfolio_data.projects else 0 }}</span></div><div><strong>Certificates</strong><span>{{ portfolio_data.certificates|length if portfolio_data.certificates else 0 }}</span></div><div><strong>CV</strong><span>{{ portfolio_data.cv or 'Not uploaded' }}</span></div><div><strong>Websites</strong><span>{{ portfolio_data.websites|join(', ') if portfolio_data.websites else 'Not added' }}</span></div></div></article>
+                <article class="glass-panel compact"><h3>Professional Skills</h3><p class="hero-bio">{{ profile.bio or 'Showcase your skills, projects, businesses, and certificates here.' }}</p></article>
+            </div>
+        </section>
+
+        <section id="courses-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>LEARNING</p><h2>Courses</h2></div><span class="pill"><i class="fas fa-graduation-cap"></i> Creator Education</span></div>
+            {% set icon='fa-graduation-cap' %}{% set title='Courses ready' %}{% set message='Courses, premium content, and creator education can be launched from this profile hub.' %}{% set action_href='/marketplace/' %}{% set action_label='Open Storefront' %}{% include "profile/partials/profile_empty_state.html" %}
+        </section>
+
+        <section id="ai-assistant-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>AI PROFILE ASSISTANT</p><h2>AI Assistant</h2></div><span class="pill"><i class="fas fa-robot"></i> Connected</span></div>
+            <div class="profile-action-row">
+                <button class="profile-action-btn accent" type="button" onclick="callProfileAI('about_me')"><i class="fas fa-circle-question"></i> Ask AI About Me</button>
+                <button class="profile-action-btn" type="button" onclick="callProfileAI('bio')"><i class="fas fa-pen-nib"></i> AI Bio Writer</button>
+                <button class="profile-action-btn" type="button" onclick="callProfileAI('caption')"><i class="fas fa-wand-magic-sparkles"></i> AI Caption Writer</button>
+                <button class="profile-action-btn subtle" type="button" onclick="callProfileAI('dating')"><i class="fas fa-heart-circle-bolt"></i> AI Dating Compatibility</button>
+            </div>
+            <div class="glass-panel compact ai-response-panel" id="ai-response-panel">
+                <p class="hero-bio">Use the existing AI service to generate captions, bios, hashtags, and safe profile suggestions.</p>
+            </div>
+        </section>
+
+        <section id="storefront-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>CREATOR MONETIZATION HUB</p><h2>Storefront</h2></div><span class="pill premium-pill"><i class="fas fa-gem"></i> Monetization</span></div>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact"><h3>Revenue Streams</h3><div class="creator-list"><div><strong>Subscriptions</strong><span>{{ creator_data.subscribers or 0 }}</span></div><div><strong>Tips & Gifts</strong><span>{{ creator_data.gifts_received or 0 }}</span></div><div><strong>Paid Live Streams</strong><span>Ready</span></div><div><strong>Premium Content</strong><span>Ready</span></div></div></article>
+                <article class="glass-panel compact"><h3>Streaming Storefront</h3><div class="creator-list"><div><strong>Products in Live</strong><span>{{ marketplace_data.featured_products|length if marketplace_data.featured_products else 0 }}</span></div><div><strong>Buy / Checkout</strong><span>Enabled</span></div><div><strong>Gaming Streaming</strong><span>Mobile / PC / Console</span></div><div><strong>Creator Teams</strong><span>{{ creator_data.team.cohosts if creator_data.team else 0 }} co-host slots</span></div></div></article>
+            </div>
+        </section>
+
+        <section id="achievements-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>STATUS</p><h2>Achievements</h2></div><span class="pill"><i class="fas fa-medal"></i> {{ achievements_list|selectattr('earned')|list|length }} earned</span></div>
+            <div class="chip-row">
+                {% for achievement in achievements_list %}
+                <span class="{% if achievement.earned %}premium-pill{% endif %}"><i class="fas fa-award"></i> {{ achievement.label }}</span>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section id="verification-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>VERIFICATION</p><h2>Verification</h2></div><span class="pill"><i class="fas fa-shield"></i> {{ reputation_data.verification_state or 'Standard' }}</span></div>
+            <div class="profile-super-grid">
+                <article class="glass-panel compact"><h3>Verification Levels</h3><div class="creator-list"><div><strong>Verified</strong><span>{{ 'Verified' if profile.is_verified else 'Not Verified' }}</span></div><div><strong>Email</strong><span>{{ 'Verified' if profile.email_verified else 'Not Verified' }}</span></div><div><strong>Professional</strong><span>{{ 'Yes' if profile.rank in ['Creator', 'Legend', 'Titan'] else 'No' }}</span></div><div><strong>Premium Creator</strong><span>{{ 'Yes' if profile.is_premium else 'No' }}</span></div></div></article>
+                <article class="glass-panel compact"><h3>Community Reputation</h3><div class="creator-list"><div><strong>Trust Score</strong><span>{{ reputation_data.trust_score or 0 }}</span></div><div><strong>Reports</strong><span>{{ reputation_data.reports_count or 0 }}</span></div><div><strong>Transaction Reliability</strong><span>{{ reputation_data.transaction_reliability or 0 }}%</span></div><div><strong>Premium Badge</strong><span>{{ 'Shown' if profile.is_premium or profile.is_verified else 'Hidden' }}</span></div></div></article>
+            </div>
+        </section>
+
+        <section id="about-content" class="glass-panel tab-content" style="display:none;">
+            <div class="panel-head"><div><p>ABOUT</p><h2>About</h2></div><span class="pill"><i class="fas fa-id-badge"></i> {{ profile.profile_type or 'member'|title }}</span></div>
+            <div class="premium-tier-banner">
+                <div>
+                    <p>{{ profile.bio or 'No bio added yet.' }}</p>
+                    <div class="creator-list">
+                        <div><strong>Country / Location</strong><span>{{ profile_location }}</span></div>
+                        <div><strong>Profile URL</strong><span>/profile/@{{ profile.username }}</span></div>
+                        <div><strong>Theme</strong><span>{{ profile.profile_theme or 'Dark Premium' }}</span></div>
+                        <div><strong>Skills</strong><span>{{ skills|join(', ') }}</span></div>
+                    </div>
+                </div>
+                <div class="metric-stack">
+                    <div><span>Completion</span><strong>{{ completion_data.percentage or 0 }}%</strong></div>
+                    <div><span>Missing Fields</span><strong>{{ completion_missing|join(', ') if completion_missing else 'Complete' }}</strong></div>
+                    <div><span>Verification</span><strong>{{ reputation_data.verification_state or 'Standard' }}</strong></div>
+                    <div><span>Theme Choice</span><strong>{{ profile.profile_theme or 'Dark Premium' }}</strong></div>
+                </div>
+            </div>
+        </section>
     </div>
+
+    <aside class="profile-side-column">
+        <section class="glass-panel compact">
+            <div class="panel-head"><div><p>PROFILE STRENGTH</p><h2>Completion</h2></div><span class="pill"><i class="fas fa-bolt"></i> {{ completion_data.percentage or 0 }}%</span></div>
+            <div class="level-progress-track"><span style="width: {{ completion_data.percentage or 0 }}%"></span></div>
+            <div class="creator-list" style="margin-top:16px;">
+                {% for field in completion_missing %}
+                <div><strong>Missing</strong><span>{{ field }}</span></div>
+                {% else %}
+                <div><strong>Status</strong><span>Profile looks strong.</span></div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="glass-panel compact">
+            <div class="panel-head"><div><p>CREATOR DASHBOARD</p><h2>Analytics</h2></div><span class="pill premium-pill"><i class="fas fa-chart-column"></i> Premium Hero</span></div>
+            <div class="metric-stack">
+                <div><span>Earnings</span><strong>N$ {{ creator_data.earnings or 0 }}</strong></div>
+                <div><span>Subscribers</span><strong>{{ creator_data.subscribers or 0 }}</strong></div>
+                <div><span>Views</span><strong>{{ creator_data.views or 0 }}</strong></div>
+                <div><span>Live Viewers</span><strong>{{ creator_data.live_viewers or 0 }}</strong></div>
+                <div><span>Gifts Received</span><strong>{{ creator_data.gifts_received or 0 }}</strong></div>
+                <div><span>Ad Revenue</span><strong>{{ creator_data.ad_revenue or 0 }}</strong></div>
+            </div>
+        </section>
+
+        <section class="glass-panel compact">
+            <div class="panel-head"><div><p>THEME</p><h2>Profile Theme</h2></div><span class="pill"><i class="fas fa-palette"></i> {{ profile.profile_theme or 'Dark Premium' }}</span></div>
+            <div class="chip-row">
+                {% for choice in theme_choices %}
+                <span>{{ choice }}</span>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="glass-panel compact">
+            <div class="panel-head"><div><p>CONTACT CARD</p><h2>Reach Out</h2></div></div>
+            <div class="profile-action-row quick-actions">
+                {% if contact_data.call and permissions_data.can_call %}<button class="profile-action-btn subtle" onclick="startAudioCall('{{ profile.id }}')"><i class="fas fa-phone"></i> Call</button>{% endif %}
+                {% if contact_data.whatsapp %}<button class="profile-action-btn subtle" onclick="openWhatsApp()"><i class="fab fa-whatsapp"></i> WhatsApp</button>{% endif %}
+                {% if contact_data.email and permissions_data.can_contact_email %}<button class="profile-action-btn subtle" onclick="openEmail()"><i class="fas fa-envelope"></i> Email</button>{% endif %}
+                {% if contact_data.message and permissions_data.can_message %}<a class="profile-action-btn subtle" href="/messages/"><i class="fas fa-comment"></i> Message</a>{% endif %}
+            </div>
+        </section>
+
+        <section class="glass-panel compact">
+            <div class="panel-head"><div><p>ACHIEVEMENT BADGES</p><h2>Badges</h2></div></div>
+            <div class="chip-row">
+                {% for achievement in achievements_list %}
+                <span class="{% if achievement.earned %}premium-pill{% endif %}">{{ achievement.label }}</span>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="glass-panel compact">
+            <div class="panel-head"><div><p>AI PERSONAL ASSISTANT</p><h2>Automation</h2></div></div>
+            <div class="creator-list">
+                <div><strong>Answer Messages</strong><span>{{ 'Enabled' if ai_data.message_assistant else 'Unavailable' }}</span></div>
+                <div><strong>Schedule Events</strong><span>{{ 'Enabled' if ai_data.schedule_assistant else 'Unavailable' }}</span></div>
+                <div><strong>Recommend Content</strong><span>{{ 'Enabled' if ai_data.assistant_enabled else 'Unavailable' }}</span></div>
+                <div><strong>Manage Profile</strong><span>{{ 'Enabled' if ai_data.bio_writer else 'Unavailable' }}</span></div>
+            </div>
+        </section>
+    </aside>
 </div>
 
 <style>
-    .premium-profile-body {
-        background: var(--chain-bg);
-        min-height: 500px;
-        padding: 40px 20px;
-    }
-    .premium-content-container {
-        max-width: 1100px;
-        margin: 0 auto;
-        display: grid;
-        grid-template-columns: 320px 1fr;
-        gap: 40px;
-    }
-
-    .premium-glass-card {
-        background: var(--chain-bg-panel);
-        border: 1px solid var(--chain-border);
-        border-radius: 20px;
-        padding: 24px;
-        backdrop-filter: blur(20px);
-    }
-
-    /* AI Widget */
-    .ai-widget {
-        border: 1px solid var(--chain-primary);
-        box-shadow: 0 0 20px rgba(108, 92, 231, 0.1);
-        margin-bottom: 24px;
-    }
-    .ai-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .ai-orb {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: var(--chain-primary);
-        box-shadow: 0 0 10px var(--chain-primary);
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.4); opacity: 0.5; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-    .ai-widget p { font-size: 13px; color: var(--chain-muted); line-height: 1.5; margin-bottom: 16px; }
-    .ai-action-btn {
-        width: 100%;
-        height: 40px;
-        border-radius: 10px;
-        background: rgba(108, 92, 231, 0.1);
-        color: var(--chain-primary);
-        border: 1px solid var(--chain-primary);
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .ai-action-btn:hover { background: var(--chain-primary); color: white; }
-
-    /* Creator Mini Dash */
-    .creator-mini-dash h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--chain-muted); margin: 0 0 15px; }
-    .earnings-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
-    .earnings-row strong { font-size: 24px; font-weight: 900; color: var(--chain-success); }
-    .withdraw-link { font-size: 12px; color: var(--chain-secondary); font-weight: 700; }
-    .mini-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; border-top: 1px solid var(--chain-border); pt: 15px; }
-    .m-item { display: flex; flex-direction: column; }
-    .m-item span { font-size: 11px; color: var(--chain-muted); text-transform: uppercase; }
-    .m-item strong { font-size: 16px; font-weight: 800; }
-
-    /* Content Grids */
-    .content-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-    .post-card { padding: 0; overflow: hidden; }
-    .post-media { width: 100%; aspect-ratio: 16/9; overflow: hidden; }
-    .post-media img { width: 100%; height: 100%; object-fit: cover; }
-    .post-info { padding: 20px; }
-    .post-info p { margin: 0 0 15px; font-size: 15px; line-height: 1.6; }
-    .post-meta { display: flex; gap: 20px; color: var(--chain-muted); font-size: 14px; font-weight: 700; }
-
-    .reels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-    .reel-thumb { padding: 0; aspect-ratio: 9/16; overflow: hidden; position: relative; cursor: pointer; }
-    .reel-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
-    .reel-thumb:hover img { transform: scale(1.05); }
-    .reel-overlay { position: absolute; inset: 0; background: linear-gradient(transparent, rgba(0,0,0,0.5)); display: flex; align-items: flex-end; padding: 15px; color: white; font-weight: 800; }
-
-    .empty-tab-state { text-align: center; padding: 60px 20px; color: var(--chain-muted); }
-    .empty-tab-state i { font-size: 40px; margin-bottom: 15px; opacity: 0.3; }
-
-    .premium-hr { border: none; border-top: 1px solid var(--chain-border); margin: 20px 0; }
-    .about-details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .d-item { display: flex; flex-direction: column; gap: 4px; }
-    .d-item strong { font-size: 12px; color: var(--chain-muted); text-transform: uppercase; }
-    .d-item span { font-size: 14px; font-weight: 600; }
-
-    @media (max-width: 900px) {
-        .premium-content-container { grid-template-columns: 1fr; }
-        .premium-sidebar { order: 2; }
-        .premium-main-content { order: 1; }
-        .reels-grid { grid-template-columns: repeat(2, 1fr); }
-    }
+    .profile-super-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+    .quick-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .ai-response-panel pre { white-space: pre-wrap; color: var(--chain-text); }
+    @media (max-width: 1100px) { .profile-super-grid, .quick-actions { grid-template-columns:1fr; } }
 </style>
+
+<script>
+function shareProfile() {
+    const url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: document.title, url }).catch(() => {});
+        return;
+    }
+    copyProfileLink();
+}
+function copyProfileLink() {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.location.href);
+    }
+}
+function startAudioCall() { window.location.href = '/calls/recent'; }
+function startVideoCall() { window.location.href = '/calls/recent'; }
+function openGiftModal() { window.location.href = '/wallet/'; }
+function addFriend() { window.location.href = '/matching/'; }
+function subscribeToCreator() { switchToTab('storefront'); }
+function bookCreator() { window.location.href = '/marketplace/'; }
+function openContactCard() { switchToTab('about'); }
+function openWhatsApp() { window.location.href = '/messages/'; }
+function openEmail() { window.location.href = '/messages/'; }
+function switchToTab(tabId) {
+    const tabBtn = document.querySelector(`.tab-link[href="#${tabId}"]`);
+    if (tabBtn) tabBtn.click();
+}
+async function callProfileAI(mode) {
+    const panel = document.getElementById('ai-response-panel');
+    panel.innerHTML = '<p class="hero-bio">Thinking...</p>';
+    try {
+        const resp = await fetch('/profile/creator/ai-assist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: mode === 'caption' ? 'reel' : 'live', topic: mode }),
+        });
+        const data = await resp.json();
+        panel.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    } catch (error) {
+        panel.innerHTML = '<p class="hero-bio">AI assistant is unavailable right now, but your profile page is still working safely.</p>';
+    }
+}
+</script>
 {% endblock %}

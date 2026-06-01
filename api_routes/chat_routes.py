@@ -4,7 +4,7 @@ from services.profile_service import get_current_profile
 from services.messaging_engine import list_threads, get_thread_messages, send_message, find_or_create_direct_thread
 from services.neon_service import write_query
 
-chat_bp = Blueprint("chat_v2", __name__, url_prefix="/messages")
+chat_bp = Blueprint("chat_v2", __name__, url_prefix="/chat")
 
 @chat_bp.route("/")
 @login_required
@@ -22,7 +22,7 @@ def thread(thread_id):
     from services.neon_service import fast_query
     thread_info = fast_query("SELECT id FROM chain_message_threads WHERE id = %s", (thread_id,))
     if not thread_info:
-        return redirect(url_for("chat_v2.inbox"))
+        return redirect(url_for("messages.inbox"))
     
     # Mark as read
     write_query("UPDATE chain_thread_members SET last_read_at = now() WHERE thread_id = %s AND profile_id = %s", (thread_id, profile["id"]))
@@ -36,7 +36,7 @@ def start_chat(other_id):
     thread_id = find_or_create_direct_thread(current["id"], other_id)
     if not thread_id:
         flash("Could not start chat", "error")
-        return redirect(url_for("chat_v2.inbox"))
+        return redirect(url_for("messages.inbox"))
     
     return redirect(url_for("chat_v2.thread", thread_id=thread_id))
 
