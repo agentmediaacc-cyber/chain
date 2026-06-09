@@ -70,3 +70,14 @@ def get_stun_status():
     if not STUN_SERVER_URL:
         return "missing"
     return "ready"
+
+
+def get_turn_diagnostics():
+    return {
+        "turn_configured": get_turn_status(),
+        "stun_configured": get_stun_status(),
+        "turn_url": TURN_SERVER_URL[:30] + "..." if len(TURN_SERVER_URL) > 30 else TURN_SERVER_URL if TURN_SERVER_URL else None,
+        "stun_url": STUN_SERVER_URL,
+        "turn_missing": not bool(TURN_SERVER_URL),
+        "warning": "TURN server not configured. Calls may fail on strict NAT networks." if not TURN_SERVER_URL else None,
+    }

@@ -276,6 +276,15 @@
 .multi-bar .mb-count { font-size:12px; color:var(--chat-muted); flex:1; }
 .multi-bar button { width:32px; height:32px; border-radius:50%; border:none; background:var(--chat-panel); color:var(--chat-text); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; }
 
+/* ---- SELECTION MODE ---- */
+.selection-active .msg-bubble { cursor:pointer; transition:box-shadow 0.15s, transform 0.1s; }
+.selection-active .msg-bubble:hover { box-shadow:0 0 0 2px var(--chat-primary); transform:scale(0.98); }
+.msg-bubble.selected { box-shadow:0 0 0 2px var(--chat-primary); background:rgba(255,47,125,0.08); }
+.msg-bubble.selected.msg-mine { background:linear-gradient(135deg,#ff2f7d,#7c3aed); box-shadow:0 0 0 2px #fff; }
+.selection-active .msg-actions { display:none !important; }
+.selection-active .msg-reactions { display:none !important; }
+.multi-bar.show ~ .chat-composer { border-top-color:var(--chat-primary); }
+
 /* ---- DEV DIAG OVERLAY POSITION ---- */
 #dev-diag-bar { font-size:10px!important; height:20px!important; }
 
@@ -408,6 +417,10 @@
 }
 .call-log-card.phase41 .clc-callback { background:var(--chat-primary-grad);color:#fff; }
 .call-log-card.phase41 .clc-callback:hover { transform:scale(1.1); }
+.call-log-card.phase41 .clc-msg { background:var(--chat-panel);color:var(--chat-text); }
+.call-log-card.phase41 .clc-msg:hover { background:var(--chat-primary-grad);color:#fff;transform:scale(1.1); }
+.call-log-card.phase41 .clc-info { background:var(--chat-panel);color:var(--chat-muted); }
+.call-log-card.phase41 .clc-info:hover { background:rgba(255,255,255,0.15);color:var(--chat-text);transform:scale(1.1); }
 
 /* Participant Chips */
 .participant-chips {

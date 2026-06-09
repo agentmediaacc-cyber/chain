@@ -14,6 +14,7 @@
 .group-call-header .room-info{display:flex;align-items:center;gap:12px;}
 .group-call-header .room-name{font-weight:800;font-size:18px;}
 .group-call-header .participant-badge{background:rgba(255,255,255,.1);border-radius:999px;padding:4px 12px;font-size:13px;}
+#gc-e2ee-badge{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);font-weight:600;}
 .group-call-grid{
     flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
     gap:12px;padding:16px;overflow-y:auto;align-content:center;
@@ -67,6 +68,7 @@
     <div class="group-call-header">
         <div class="room-info">
             <span class="room-name" id="gc-room-name">{{ call.room_name or 'Group Call' }}</span>
+            <span class="participant-badge" id="gc-e2ee-badge">🔒 End-to-End Encrypted</span>
             <span class="participant-badge" id="gc-participant-count">{{ (participants|length) if participants else 0 }} participants</span>
             <span class="participant-badge" id="gc-call-timer" style="font-family:monospace">00:00</span>
         </div>

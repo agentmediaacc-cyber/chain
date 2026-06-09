@@ -58,7 +58,26 @@ from services.webrtc_call_service import (
 )
 
 
-_SOCKET_STATE_TTL_SECONDS = 180
+import time
+from functools import wraps
+
+_SOCKET_RATE_LIMITS = {}
+_SOCKET_RATE_LIMIT_TTL = 60
+
+
+def _socket_rate_limit(key, max_per_minute=30):
+    now = time.time()
+    entry = _SOCKET_RATE_LIMITS.get(key)
+    if entry and now - entry.get("ts", 0) < 60:
+        entry["count"] = entry.get("count", 0) + 1
+        if entry["count"] > max_per_minute:
+            return True
+    else:
+        _SOCKET_RATE_LIMITS[key] = {"count": 1, "ts": now}
+    return False
+
+
+_SOCKET_STATE_TTL_SECONDS = 300
 _EVENT_DEDUPE_TTL_SECONDS = 120
 
 
@@ -135,6 +154,7 @@ def handle_connect():
     profile_id = _get_profile_id()
     if profile_id:
         join_room(profile_room(profile_id))
+        _track_joined_room(profile_id, profile_room(profile_id))
         set_online(profile_id)
         mds_update_presence(profile_id, status="online")
         _record_sid(profile_id)
@@ -199,6 +219,14 @@ def handle_join_thread(data):
     thread_id = (data or {}).get("thread_id")
     profile_id = _get_profile_id()
     if profile_id and thread_id and get_thread(thread_id, profile_id):
+        # Auth check: verify profile is a thread member
+        from services.neon_service import fast_query
+        member_check = fast_query(
+            "SELECT profile_id FROM chain_thread_members WHERE thread_id = %s AND profile_id = %s LIMIT 1",
+            (thread_id, profile_id), default=[]
+        )
+        if not member_check:
+            return {"joined": False, "error": "not_member"}
         room_name = thread_room(thread_id)
         join_room(room_name)
         _track_joined_room(profile_id, room_name)
@@ -257,6 +285,8 @@ def handle_leave_live(data):
 @socketio.on("typing_start")
 def handle_typing_start(data):
     profile_id = _get_profile_id()
+    if _socket_rate_limit(f"typing:{profile_id}", 20):
+        return {"typing": False, "error": "rate_limited"}
     thread_id = (data or {}).get("thread_id")
     if _ignore_duplicate_event("typing_start", data, f"{profile_id}:{thread_id}:start"):
         return {"typing": True, "duplicate": True, "thread_id": thread_id}
@@ -327,6 +357,8 @@ def handle_typing_stop(data):
 @socketio.on("send_message")
 def handle_message_send(data):
     profile_id = _get_profile_id()
+    if _socket_rate_limit(f"msg_send:{profile_id}", 30):
+        return {"success": False, "error": "rate_limited"}
     payload = data or {}
     thread_id = payload.get("thread_id")
     if not profile_id or not thread_id:
@@ -617,8 +649,9 @@ def handle_heartbeat():
     profile_id = _get_profile_id()
     if profile_id:
         heartbeat(profile_id)
-        set_json(_socket_state_key(profile_id), {"rooms": _recover_rooms(profile_id), "updated_at": _utcnow_iso()}, ttl=_SOCKET_STATE_TTL_SECONDS)
-        return {"ok": True, "sid": request.sid, "heartbeat_ack": True}
+        rooms = _recover_rooms(profile_id)
+        set_json(_socket_state_key(profile_id), {"rooms": rooms, "updated_at": _utcnow_iso()}, ttl=_SOCKET_STATE_TTL_SECONDS)
+        return {"ok": True, "sid": request.sid, "heartbeat_ack": True, "rooms": rooms}
     return {"ok": False}
 
 
@@ -788,8 +821,10 @@ def handle_presence_heartbeat(data):
     profile_id = _get_profile_id()
     if profile_id:
         heartbeat(profile_id)
-        return {"success": True}
+        rooms = _recover_rooms(profile_id)
+        return {"success": True, "rooms": rooms}
     return {"success": False}
+
 
 @socketio.on("call:status")
 def handle_call_status(data):
@@ -877,6 +912,8 @@ def handle_phase30_call_waiting(data):
 @socketio.on("call:start")
 def handle_webrtc_call_start(data):
     profile_id = _get_profile_id()
+    if _socket_rate_limit(f"call_start:{profile_id}", 10):
+        return {"ok": False, "error": "rate_limited"}
     if not profile_id:
         return {"ok": False, "error": "unauthorized"}
     target_id = (data or {}).get("target_id")
@@ -1050,6 +1087,8 @@ def handle_webrtc_call_blocked(data):
 @socketio.on("call:offer")
 def handle_webrtc_call_offer(data):
     profile_id = _get_profile_id()
+    if _socket_rate_limit(f"call_offer:{profile_id}", 20):
+        return {"ok": False, "error": "rate_limited"}
     if not profile_id:
         return {"ok": False}
     target_id = (data or {}).get("target_id")
@@ -1089,6 +1128,8 @@ def handle_webrtc_call_answer(data):
 @socketio.on("call:ice-candidate")
 def handle_webrtc_call_ice(data):
     profile_id = _get_profile_id()
+    if _socket_rate_limit(f"call_ice:{profile_id}", 60):
+        return {"ok": False, "error": "rate_limited"}
     if not profile_id:
         return {"ok": False}
     target_id = (data or {}).get("target_id")

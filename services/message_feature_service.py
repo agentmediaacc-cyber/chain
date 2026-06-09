@@ -255,7 +255,7 @@ def add_reaction(message_id, profile_id, reaction_type):
     reaction_type = (reaction_type or "like").strip()
     try:
         _safe_write(
-            "INSERT INTO chain_message_reactions (message_id, profile_id, reaction_type) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+            "INSERT INTO chain_message_reactions (message_id, profile_id, reaction_type) VALUES (%s, %s, %s) ON CONFLICT (message_id, profile_id) DO NOTHING",
             (message_id, profile_id, reaction_type),
         )
     except Exception:
@@ -277,7 +277,7 @@ def edit_message(message_id, editor_profile_id, new_body):
         rows = _safe_query("SELECT body, thread_id FROM chain_messages WHERE id = %s LIMIT 1", (message_id,), default=[])
         old_body = rows[0].get("body") if rows else None
         _safe_write("UPDATE chain_messages SET body = %s, edited_at = now() WHERE id = %s AND sender_profile_id = %s", (new_body, message_id, editor_profile_id))
-        _safe_write("INSERT INTO chain_message_edits (message_id, editor_profile_id, old_body, new_body) VALUES (%s, %s, %s, %s)", (message_id, editor_profile_id, old_body, new_body), timeout_ms=500)
+        _safe_write("INSERT INTO chain_message_edits (id, message_id, editor_profile_id, old_body, new_body) VALUES (%s, %s, %s, %s, %s)", (str(uuid.uuid4()), message_id, editor_profile_id, old_body, new_body), timeout_ms=500)
     except Exception:
         for messages in _MESSAGES.values():
             for message in messages:
@@ -292,7 +292,7 @@ def delete_message(message_id, profile_id, for_everyone=False):
     profile_id = _uuid(profile_id)
     try:
         if for_everyone:
-            _safe_write("UPDATE chain_messages SET deleted_at = now() WHERE id = %s AND sender_profile_id = %s", (message_id, profile_id))
+            _safe_write("UPDATE chain_messages SET deleted_at = now(), deleted_for_everyone = TRUE WHERE id = %s AND sender_profile_id = %s", (message_id, profile_id))
         else:
             _safe_write("INSERT INTO chain_message_deletions (message_id, profile_id, delete_scope) VALUES (%s, %s, 'me') ON CONFLICT DO NOTHING", (message_id, profile_id))
     except Exception:

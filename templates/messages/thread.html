@@ -438,6 +438,17 @@
         <i class="fas fa-times" onclick="cancelReply()" style="cursor: pointer;"></i>
     </div>
 
+    <!-- Selection Toolbar -->
+    <div class="multi-bar" id="multi-bar">
+        <span class="mb-count" id="multi-count">0 selected</span>
+        <button onclick="multiAction('forward')" title="Forward"><i class="fas fa-share"></i></button>
+        <button onclick="multiAction('delete_for_me')" title="Delete for me"><i class="fas fa-trash-can"></i></button>
+        <button onclick="multiAction('delete_for_everyone')" title="Delete for everyone"><i class="fas fa-user-slash"></i></button>
+        <button onclick="multiAction('star')" title="Star"><i class="fas fa-star"></i></button>
+        <button onclick="multiAction('pin')" title="Pin"><i class="fas fa-thumbtack"></i></button>
+        <button onclick="clearSelection()" title="Cancel"><i class="fas fa-times"></i></button>
+    </div>
+
     <form class="chat-composer" id="chat-form">
         <input type="hidden" id="thread_id" name="thread_id" value="{{ thread.id }}">
         <input type="hidden" id="parent_message_id" name="parent_message_id" value="">
@@ -942,10 +953,46 @@
         }
     });
 
-    // ---- Typing emission ----
+    // ---- Typing emission + auto-grow + draft ----
+    const DRAFT_KEY = 'chain_draft_' + threadId;
+    let draftTimer = null;
+
+    function autoGrowInput() {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    }
+
+    function saveDraft() {
+        try {
+            const text = input.value.trim();
+            if (text) {
+                localStorage.setItem(DRAFT_KEY, text);
+            } else {
+                localStorage.removeItem(DRAFT_KEY);
+            }
+        } catch(e) {}
+    }
+
+    function restoreDraft() {
+        try {
+            const saved = localStorage.getItem(DRAFT_KEY);
+            if (saved) {
+                input.value = saved;
+                if (sendBtn) sendBtn.disabled = false;
+                autoGrowInput();
+            }
+        } catch(e) {}
+    }
+
+    function clearDraft() {
+        try { localStorage.removeItem(DRAFT_KEY); } catch(e) {}
+    }
+
     input.addEventListener('input', () => {
+        autoGrowInput();
         if (sendBtn) sendBtn.disabled = input.value.trim().length === 0 && !pendingAttachment;
         clearTimeout(typingTimeout);
+        clearTimeout(draftTimer);
         if (input.value.trim().length > 0) {
             socket.emit('typing:start', { thread_id: threadId });
         } else {
@@ -954,15 +1001,14 @@
         typingTimeout = setTimeout(() => {
             socket.emit('typing:stop', { thread_id: threadId });
         }, TYPING_TIMEOUT_MS);
-    });
-    if (sendBtn) sendBtn.disabled = true;
-    input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-            event.preventDefault();
-            form.requestSubmit();
-        }
+        draftTimer = setTimeout(saveDraft, 500);
     });
 
+    // Restore draft on page load
+    restoreDraft();
+    if (sendBtn) sendBtn.disabled = true;
+
+    // Enter sends, Shift+Enter newline (moved to combined handler below)
     async function pollMessages() {
         try {
             const res = await fetch('/messages/api/messages/' + encodeURIComponent(threadId), {credentials:'same-origin'});
@@ -1027,10 +1073,12 @@
         const file = pendingAttachment;
         if (!body && !file) return;
         input.value = '';
+        input.style.height = 'auto';
         pendingAttachment = null;
         if (fileInput) fileInput.value = '';
         hideAttachmentPreview();
         if (sendBtn) sendBtn.disabled = true;
+        clearDraft();
         await sendMessage(body, file);
         cancelReply();
     };
@@ -1491,6 +1539,166 @@
             wLoadCallHistory('call-history-list');
         }, 1000);
     }
+
+    // ---- Message Selection Mode ----
+    let selectionMode = false;
+    let selectedIds = new Set();
+
+    function handleMsgClick(msgId) {
+        if (selectionMode) {
+            toggleSelection(msgId);
+        }
+    }
+
+    function toggleSelection(msgId) {
+        if (selectedIds.has(msgId)) {
+            selectedIds.delete(msgId);
+        } else {
+            selectedIds.add(msgId);
+        }
+        updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+        const bar = document.getElementById('multi-bar');
+        const count = document.getElementById('multi-count');
+        const bubbles = document.querySelectorAll('.msg-bubble');
+        bubbles.forEach(b => {
+            const id = b.dataset.id;
+            if (id) {
+                b.classList.toggle('selected', selectedIds.has(id));
+                const cb = b.querySelector('input[data-message-select]');
+                if (cb) cb.checked = selectedIds.has(id);
+            }
+        });
+        if (selectedIds.size > 0) {
+            selectionMode = true;
+            bar.classList.add('show');
+            count.textContent = selectedIds.size + ' selected';
+            document.querySelectorAll('.msg-bubble-container').forEach(c => c.classList.add('selection-active'));
+        } else {
+            selectionMode = false;
+            bar.classList.remove('show');
+            document.querySelectorAll('.msg-bubble-container').forEach(c => c.classList.remove('selection-active'));
+        }
+    }
+
+    function clearSelection() {
+        selectedIds.clear();
+        updateSelectionUI();
+    }
+
+    function enableSelectionMode() {
+        selectionMode = true;
+        document.querySelectorAll('.msg-bubble-container').forEach(c => c.classList.add('selection-active'));
+        document.getElementById('multi-bar').classList.add('show');
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && selectionMode) clearSelection();
+    });
+
+    // Long-press to enable selection mode
+    let longPressTimer = null;
+    document.getElementById('message-list')?.addEventListener('pointerdown', (e) => {
+        const bubble = e.target.closest('.msg-bubble');
+        if (!bubble) return;
+        longPressTimer = setTimeout(() => {
+            if (!selectionMode) {
+                enableSelectionMode();
+                toggleSelection(bubble.dataset.id);
+            }
+        }, 500);
+    });
+    document.addEventListener('pointerup', () => { clearTimeout(longPressTimer); });
+    document.addEventListener('pointercancel', () => { clearTimeout(longPressTimer); });
+
+    function multiAction(action) {
+        if (selectedIds.size === 0) return;
+        const ids = Array.from(selectedIds);
+        if (action === 'forward') {
+            const target = prompt('Forward to thread ID:');
+            if (target) {
+                fetch('/messages/api/messages/forward', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message_ids: ids, to_thread_ids: [target]})
+                });
+            }
+        } else {
+            fetch('/messages/api/messages/multi-select', {
+                method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message_ids: ids, action: action})
+            }).then(r => r.json()).then(d => {
+                if (d.success) {
+                    if (action.startsWith('delete_')) {
+                        ids.forEach(id => {
+                            const group = document.getElementById('msg-' + id);
+                            if (group) {
+                                if (action === 'delete_for_everyone') {
+                                    group.innerHTML = '<div class="msg-deleted-notice" style="text-align:center;font-size:11px;color:var(--chain-muted);padding:4px;">This message was deleted</div>';
+                                } else {
+                                    group.remove();
+                                }
+                            }
+                        });
+                    }
+                    clearSelection();
+                }
+            });
+        }
+    }
+
+    // ---- Draft + auto-grow are integrated into input handler above ----
+
+    // ---- Call History Actions ----
+    function callHistoryAction(callId, action) {
+        if (action === 'callback') {
+            fetch('/calls/api/' + callId, {credentials: 'same-origin'})
+                .then(r => r.json()).then(data => {
+                    if (data.ok && data.call) {
+                        const otherId = data.call.caller_profile_id === myId ? data.call.receiver_profile_id : data.call.caller_profile_id;
+                        initiateCall(data.call.call_type || 'audio');
+                        // Also do a REST call start
+                        fetch('/calls/api/start', {
+                            method: 'POST', credentials: 'same-origin',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({receiver_id: otherId, thread_id: threadId, call_type: data.call.call_type || 'audio'})
+                        });
+                    }
+                });
+        } else if (action === 'info') {
+            fetch('/calls/api/' + callId, {credentials: 'same-origin'})
+                .then(r => r.json()).then(data => {
+                    if (data.ok) {
+                        const info = data.call;
+                        alert('Call: ' + (info.call_type || 'audio') + '\nStatus: ' + (info.status || 'ended') + '\nStarted: ' + (info.started_at || 'unknown') + '\nDuration: ' + (info.duration_seconds || 0) + 's');
+                    }
+                });
+        } else if (action === 'delete_log') {
+            // Call log deletion via API - use existing endpoint if available
+            if (confirm('Delete this call log entry?')) {
+                const row = document.querySelector('[data-call-log-id="' + callId + '"]');
+                if (row) row.remove();
+            }
+        } else if (action === 'message') {
+            fetch('/calls/api/' + callId, {credentials: 'same-origin'})
+                .then(r => r.json()).then(data => {
+                    if (data.ok && data.call) {
+                        const otherId = data.call.caller_profile_id === myId ? data.call.receiver_profile_id : data.call.caller_profile_id;
+                        window.location.href = '/messages/start/' + otherId;
+                    }
+                });
+        }
+    }
+
+    // ---- Expose globals ----
+    window.handleMsgClick = handleMsgClick;
+    window.toggleSelection = toggleSelection;
+    window.clearSelection = clearSelection;
+    window.multiAction = multiAction;
+    window.callHistoryAction = callHistoryAction;
 </script>
 <a class="safety-report-user" href="/safety/report">Report User</a>
 <button class="safety-report-message" type="button" data-safety-action="report-message">Report Message</button>

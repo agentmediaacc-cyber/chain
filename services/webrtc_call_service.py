@@ -9,6 +9,12 @@ from services.neon_service import fast_query, write_query, get_pool_status
 from services.socketio_service import emit_to_profile
 from services.logging_service import log_info
 
+CALL_STATES = frozenset({
+    "idle", "ringing", "connecting", "connected",
+    "reconnecting", "ended", "failed", "missed", "busy"
+})
+
+
 _CALL_RATE_LIMIT = {}
 _CALL_RATE_LIMIT_TTL = 60
 
@@ -23,6 +29,18 @@ def _check_rate_limit(caller_id, receiver_id):
     else:
         _CALL_RATE_LIMIT[key] = {"count": 1, "ts": now}
     return {"ok": True}
+
+
+def check_duplicate_call(caller_profile_id, receiver_profile_id):
+    """Prevent creating duplicate calls to the same person within 10 seconds."""
+    import time
+    key = f"dup_call:{caller_profile_id}:{receiver_profile_id}"
+    now = time.time()
+    last = _CALL_RATE_LIMIT.get(key, {}).get("ts", 0)
+    if now - last < 10:
+        return True
+    _CALL_RATE_LIMIT[key] = {"ts": now}
+    return False
 
 
 def _check_blocked(caller_id, receiver_id):
@@ -127,6 +145,20 @@ def create_call(caller_profile_id, receiver_profile_id, thread_id=None, call_typ
     caller_profile_id = _uuid(caller_profile_id)
     receiver_profile_id = _uuid(receiver_profile_id)
     call_id = str(uuid.uuid4())
+
+    if caller_profile_id == receiver_profile_id:
+        return {"ok": False, "error": "self_call_not_allowed", "status": "failed"}
+
+    if check_duplicate_call(caller_profile_id, receiver_profile_id):
+        return {"ok": False, "error": "duplicate_call", "status": "failed"}
+
+    if _db_available():
+        caller_rows = fast_query("SELECT id FROM chain_profiles WHERE id = %s LIMIT 1", (caller_profile_id,), default=[])
+        if not caller_rows:
+            return {"ok": False, "error": "caller_not_found", "status": "failed"}
+        receiver_rows = fast_query("SELECT id FROM chain_profiles WHERE id = %s LIMIT 1", (receiver_profile_id,), default=[])
+        if not receiver_rows:
+            return {"ok": False, "error": "receiver_not_found", "status": "failed"}
 
     rate = _check_rate_limit(caller_profile_id, receiver_profile_id)
     if not rate.get("ok"):
@@ -252,7 +284,7 @@ def cancel_call(call_id, profile_id):
     return {"ok": True, "call": get_call(call_id)}
 
 
-def end_call(call_id, profile_id):
+def end_call(call_id, profile_id, end_reason="hung_up"):
     call_id = _uuid(call_id)
     profile_id = _uuid(profile_id)
     call = get_call(call_id)
@@ -272,8 +304,8 @@ def end_call(call_id, profile_id):
 
     try:
         write_query(
-            "UPDATE chain_calls SET status = 'ended', ended_at = now(), duration_seconds = %s, end_reason = 'hung_up', updated_at = now() WHERE id = %s",
-            (duration, call_id),
+            "UPDATE chain_calls SET status = 'ended', ended_at = now(), duration_seconds = %s, end_reason = %s, updated_at = now() WHERE id = %s",
+            (duration, end_reason, call_id),
         )
         write_query(
             """UPDATE chain_call_participants SET status = 'left', left_at = now()
@@ -698,3 +730,18 @@ def get_participants_with_profiles(call_id):
             p["avatar_url"] = profile.get("avatar_url")
         result.append(p)
     return result
+
+
+def get_call_diagnostics():
+    """Returns call system diagnostics."""
+    from services.webrtc_turn_service import get_turn_status, get_stun_status
+    return {
+        "turn_status": get_turn_status(),
+        "stun_status": get_stun_status(),
+        "turn_configured": bool(os.environ.get("TURN_SERVER_URL", "")),
+        "turn_url_set": bool(os.environ.get("TURN_SERVER_URL", "")),
+        "stun_url": os.environ.get("STUN_SERVER_URL", "stun:stun.l.google.com:19302"),
+        "turn_warning": not bool(os.environ.get("TURN_SERVER_URL", "")),
+        "call_rate_limit_count": len(_CALL_RATE_LIMIT),
+        "timestamp": _now().isoformat(),
+    }

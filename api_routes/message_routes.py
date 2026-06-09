@@ -1,3 +1,5 @@
+from datetime import datetime
+import os
 from flask import Blueprint, flash, redirect, render_template, request, url_for, session, jsonify
 from api_routes.profile_routes import login_required
 from services.profile_service import get_current_profile
@@ -97,6 +99,16 @@ def api_send():
     parent_message_id = request.form.get("parent_message_id") or data.get("parent_message_id")
     is_forwarded = request.form.get("is_forwarded") == 'true' or data.get("is_forwarded", False)
     status_id = request.form.get("status_id") or data.get("status_id")
+    
+    # Dedup check
+    if client_message_id:
+        from services.neon_service import fast_query
+        existing = fast_query(
+            "SELECT id, delivery_status FROM chain_messages WHERE sender_profile_id = %s AND client_message_id = %s LIMIT 1",
+            (profile_id, client_message_id), default=[]
+        )
+        if existing:
+            return jsonify({"success": True, "id": str(existing[0]["id"]), "delivery_status": existing[0].get("delivery_status", "sent"), "duplicate": True}), 200
     
     # Premium Fields
     sticker_id = request.form.get("sticker_id") or data.get("sticker_id")
@@ -732,3 +744,33 @@ def start_direct_message_by_username(username):
         flash("Profile not found.", "error")
         return redirect("/messages/")
     return redirect(f"/messages/start/{rows[0]['id']}")
+
+
+# =========== CALL + MESSAGE SCALE HARDENING ===========
+
+@message_bp.route("/api/retry/<message_id>", methods=["POST"])
+@login_required
+def api_retry_message(message_id):
+    profile = get_current_profile()
+    profile_id = (profile or {}).get("id") or session.get("profile_id")
+    if not profile_id:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    from services.message_delivery_service import retry_message
+    result = retry_message(message_id, profile_id)
+    if result.get("ok"):
+        return jsonify({"ok": True, "message": result["message"]}), 200
+    return jsonify({"ok": False, "error": result.get("error", "retry_failed")}), 400
+
+
+@message_bp.route("/api/socket-diagnostics")
+@login_required
+def api_socket_diagnostics():
+    profile = get_current_profile()
+    if not profile or not profile.get("id"):
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    diag = {
+        "redis_configured": bool(os.environ.get("REDIS_URL") or os.environ.get("REDIS_TLS_URL")),
+        "socket_rate_limits": len(getattr(__import__('services.socket_events', fromlist=['_SOCKET_RATE_LIMITS']), '_SOCKET_RATE_LIMITS', {})),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    return jsonify({"ok": True, "diagnostics": diag}), 200

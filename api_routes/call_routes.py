@@ -646,6 +646,21 @@ def api_phase41_participants(call_id):
     return jsonify({"ok": True, "participants": participants}), 200
 
 
+# =========== CALL + MESSAGE SCALE HARDENING DIAGNOSTICS ===========
+
+@call_bp.route("/api/diagnostics")
+@login_required
+def api_call_diagnostics():
+    profile = get_current_profile()
+    if not profile or not profile.get("id"):
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    from services.webrtc_call_service import get_call_diagnostics
+    from services.webrtc_turn_service import get_turn_diagnostics
+    diag = get_call_diagnostics()
+    diag["turn_diagnostics"] = get_turn_diagnostics()
+    return jsonify({"ok": True, "diagnostics": diag}), 200
+
+
 # =========== PHASE 2: Premium Contact Search & Safety ===========
 
 @call_bp.route("/api/contacts/search", methods=["GET"])

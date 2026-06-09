@@ -105,6 +105,9 @@ import api_routes.message_routes as _mr_patch
 _neon.fast_query = fast_query = _fake_fast_query
 _neon.write_query = write_query = _fake_write_query
 _mfs_patch.create_direct_thread = _fake_create_direct_thread
+_mfs_patch.add_reaction = lambda mid, pid, rxn: (_fake_react_to_message(mid, pid, rxn) or True) and {"ok": True, "reactions": _fake_get_reactions(mid)}
+_mfs_patch.edit_message = _fake_edit_message
+_mfs_patch.delete_message = lambda message_id, profile_id, **kwargs: _fake_delete_message_for_everyone(message_id, profile_id)
 _mds_patch.fast_query = _fake_fast_query
 _mds_patch.write_query = _fake_write_query
 _mds_patch.send_message = mds_send_message = _fake_send_message
@@ -120,6 +123,7 @@ _mds_patch.get_unread_counts_per_thread = lambda profile_id: {}
 _ps_patch.get_current_profile = _fake_current_profile
 _ps_patch.block_profile = lambda username: True
 _mr_patch.get_current_profile = _fake_current_profile
+_mr_patch.remove_reaction = lambda mid, pid, *a, **kw: _fake_remove_reaction(mid, pid)
 _mpr_patch.get_current_profile = _fake_current_profile
 _mpr_patch.send_message = _fake_send_message
 _mpr_patch.react_to_message = _fake_react_to_message

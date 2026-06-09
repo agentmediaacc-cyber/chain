@@ -864,6 +864,8 @@ function renderCallCard(log) {
         </div>
         <div class="clc-actions">
             <button class="clc-btn clc-callback" data-profile-id="${escaped(log.other_profile_id)}" onclick="wRedial(this)" title="Call back"><i class="fas fa-phone"></i></button>
+            <button class="clc-btn clc-msg" data-profile-id="${escaped(log.other_profile_id)}" onclick="window.location.href='/messages/start/' + this.dataset.profileId" title="Message"><i class="fas fa-comment"></i></button>
+            <button class="clc-btn clc-info" data-call-id="${escaped(log.call_id)}" onclick="showCallInfo(this)" title="Info"><i class="fas fa-info-circle"></i></button>
         </div>
     </div>`;
 }
@@ -873,6 +875,28 @@ function wRedial(btn) {
     if (profileId && window.wStartCall) {
         wStartCall(profileId, window.currentThreadId, 'audio');
     }
+}
+
+function showCallInfo(btn) {
+    const callId = btn.getAttribute('data-call-id');
+    if (!callId) return;
+    fetch('/calls/api/' + callId)
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok && data.call) {
+                const c = data.call;
+                const dur = c.duration_seconds ? Math.floor(c.duration_seconds / 60) + 'm ' + (c.duration_seconds % 60) + 's' : 'N/A';
+                alert('Call Details\n'
+                    + 'Type: ' + (c.call_type || 'audio') + '\n'
+                    + 'Status: ' + (c.status || 'ended') + '\n'
+                    + 'Started: ' + (c.started_at ? new Date(c.started_at).toLocaleString() : 'N/A') + '\n'
+                    + 'Duration: ' + dur + '\n'
+                    + 'Mode: ' + (c.call_mode || 'N/A'));
+            } else {
+                alert('Call not found');
+            }
+        })
+        .catch(() => alert('Failed to load call details'));
 }
 
 function wLoadCallHistory(containerId) {
@@ -992,6 +1016,7 @@ window.wUpdateMissedCallBadge = wUpdateMissedCallBadge;
 window.wLoadCallHistory = wLoadCallHistory;
 window.wRenderParticipantChips = wRenderParticipantChips;
 window.wRedial = wRedial;
+window.showCallInfo = showCallInfo;
 window.wMarkMissedSeen = wMarkMissedSeen;
 window.renderCallCard = renderCallCard;
 window.bindPhase41SocketEvents = bindPhase41SocketEvents;

@@ -110,7 +110,8 @@ def get_thread_messages(thread_id, viewer_profile_id):
 
 def send_message(thread_id, sender_profile_id, body, message_type="text",
                  media_url=None, file_url=None, audio_url=None,
-                 voice_duration_seconds=None, reply_to_message_id=None):
+                 voice_duration_seconds=None, reply_to_message_id=None,
+                 client_message_id=None):
     if message_type == "text" and body:
         try:
             from services.safety_rate_limit_service import check_action_rate_limit
@@ -132,6 +133,15 @@ def send_message(thread_id, sender_profile_id, body, message_type="text",
                 add_to_moderation_queue(sender_profile_id, "message", None, "spam", "medium", "message_spam_review", {"spam": spam})
         except Exception:
             pass
+
+    if client_message_id:
+        existing = fast_query(
+            "SELECT id FROM chain_messages WHERE sender_profile_id = %s AND client_message_id = %s LIMIT 1",
+            (sender_profile_id, client_message_id), default=[]
+        )
+        if existing:
+            return {"ok": True, "id": str(existing[0]["id"]), "duplicate": True, "delivery_status": "sent"}
+
     message_id = str(uuid4())
 
     member_rows = fast_query("""
@@ -142,6 +152,7 @@ def send_message(thread_id, sender_profile_id, body, message_type="text",
     """, (thread_id, sender_profile_id), default=[])
 
     has_receiver = bool(member_rows)
+    delivery_state = "queued" if not has_receiver else "sending"
     delivery_status = "delivered" if has_receiver else "sent"
 
     encrypted = False
@@ -159,6 +170,7 @@ def send_message(thread_id, sender_profile_id, body, message_type="text",
     ]
     if reply_to_message_id:
         params.append(reply_to_message_id)
+    params.append(delivery_state)
 
     try:
         if member_rows and body and message_type == "text":
@@ -179,12 +191,14 @@ def send_message(thread_id, sender_profile_id, body, message_type="text",
         INSERT INTO chain_messages (
             id, thread_id, sender_profile_id, body,
             message_type, media_url, delivery_status,
-            delivered_at, is_seen, created_at{enc_col}{reply_col}
+            delivered_at, is_seen, created_at{enc_col}{reply_col},
+            delivery_state
         )
         VALUES (
             %s,%s,%s,%s,%s,%s,%s,
             CASE WHEN %s THEN now() ELSE NULL END,
-            FALSE, now(){enc_val}{reply_val}
+            FALSE, now(){enc_val}{reply_val},
+            %s
         )
     """, tuple(params))
 
@@ -219,6 +233,7 @@ def send_message(thread_id, sender_profile_id, body, message_type="text",
         "body": body,
         "message_type": message_type,
         "delivery_status": delivery_status,
+        "delivery_state": delivery_state,
         "is_delivered": has_receiver,
         "is_seen": False,
         "created_at": now_iso(),
@@ -411,3 +426,54 @@ def get_typing_users(thread_id, exclude_profile_id=None):
         WHERE tm.thread_id = %s
     """, (thread_id,), default=[])
     return [r for r in rows if r["profile_id"] != exclude_profile_id] if exclude_profile_id else rows
+
+
+def retry_message(message_id, profile_id):
+    rows = fast_query(
+        "SELECT id, thread_id, sender_profile_id, body, message_type FROM chain_messages WHERE id = %s AND sender_profile_id = %s AND delivery_state = 'failed' LIMIT 1",
+        (message_id, profile_id), default=[]
+    )
+    if not rows:
+        return {"ok": False, "error": "not_found_or_not_failed"}
+    row = rows[0]
+    try:
+        write_query(
+            "UPDATE chain_messages SET delivery_state = 'retrying', retry_count = retry_count + 1, retrying_at = now() WHERE id = %s",
+            (message_id,),
+        )
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+    return {"ok": True, "message": row}
+
+
+def mark_message_failed(message_id, reason="delivery_failed"):
+    try:
+        write_query(
+            "UPDATE chain_messages SET delivery_state = 'failed', failed_reason = %s, delivery_status = 'failed' WHERE id = %s",
+            (reason, message_id),
+        )
+        return True
+    except Exception:
+        return False
+
+
+def mark_message_delivered(message_id):
+    try:
+        write_query(
+            "UPDATE chain_messages SET delivery_state = 'delivered', delivery_status = 'delivered', delivered_at = COALESCE(delivered_at, now()) WHERE id = %s",
+            (message_id,),
+        )
+        return True
+    except Exception:
+        return False
+
+
+def mark_message_seen(message_id):
+    try:
+        write_query(
+            "UPDATE chain_messages SET delivery_state = 'seen', is_seen = TRUE, seen_at = COALESCE(seen_at, now()), read_at = COALESCE(read_at, now()), delivery_status = 'seen' WHERE id = %s",
+            (message_id,),
+        )
+        return True
+    except Exception:
+        return False

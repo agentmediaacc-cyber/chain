@@ -10,12 +10,18 @@ def _json_safe_payload(value):
 
 from datetime import datetime, date
 import os
+import logging
+import time
+import random
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from services.circuit_breaker import CircuitBreaker
 from services.redis_service import _REDIS_URL, redis_available, get_redis, log_redis_warning
 
+logger = logging.getLogger(__name__)
+
 socketio = SocketIO()
 _SOCKET_BREAKER = CircuitBreaker("socketio_emit", failure_threshold=3, recovery_seconds=30)
+_SOCKET_EMIT_RATE_LIMIT = {}
 
 
 def profile_room(profile_id):
@@ -29,18 +35,33 @@ def thread_room(thread_id):
 def live_room(room_id):
     return f"live:{room_id}"
 
+def _check_emit_rate(event, room, max_per_second=100):
+    now = time.time()
+    key = f"{event}:{room}"
+    entry = _SOCKET_EMIT_RATE_LIMIT.get(key)
+    if entry and now - entry.get("ts", 0) < 1:
+        entry["count"] = entry.get("count", 0) + 1
+        if entry["count"] > max_per_second:
+            return True
+    else:
+        _SOCKET_EMIT_RATE_LIMIT[key] = {"count": 1, "ts": now}
+    return False
+
+
 def init_socketio(app):
     """Initializes Socket.IO with Redis and optimized settings."""
     mgr = None
+    redis_url = os.environ.get("REDIS_URL") or os.environ.get("REDIS_TLS_URL") or _REDIS_URL
+    
     # Disable queue during testing as SocketIOTestClient doesn't support it
-    if not app.config.get("TESTING") and redis_available():
-        mgr = _REDIS_URL
-        print(f"[socketio] Scalable mode: Using Redis manager at {mgr}")
+    if not app.config.get("TESTING") and redis_url:
+        mgr = redis_url
+        print(f"[socketio] SCALABLE PRODUCTION MODE: Using Redis manager at {redis_url[:20]}...")
     else:
         if app.config.get("TESTING"):
             print("[socketio] Test mode: Skipping Redis manager")
         else:
-            log_redis_warning("redis_socketio_fallback", "[socketio] Single-node mode: Redis unavailable")
+            log_redis_warning("redis_socketio_fallback", "[socketio] WARNING: Running in SINGLE-NODE mode. For production with multiple users, configure REDIS_URL and restart.")
 
     socketio.init_app(
         app,
@@ -59,6 +80,10 @@ def _emit_async(event, payload, room=None, include_self=True):
         if not _SOCKET_BREAKER.allow():
             return
         if getattr(socketio, "server", None) is None:
+            return
+        if _check_emit_rate(event, room):
+            if random.random() < 0.01:
+                logger.warning(f"[socketio] Dropping {event} to {room} (rate limit)")
             return
         try:
             socketio.emit(event, _json_safe_payload(payload), room=room, include_self=include_self)
