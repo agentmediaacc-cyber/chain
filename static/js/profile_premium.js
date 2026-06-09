@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const body = document.body;
+  body.classList.add("has-premium-profile");
 
   document.querySelectorAll("[data-file-trigger]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -84,7 +85,85 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       body.classList.add(`profile-theme-${button.dataset.themeChoice}`);
       document.querySelector(".premium-profile-shell")?.setAttribute("data-theme", button.dataset.themeChoice);
+      localStorage.setItem("chain_profile_theme_preview", button.dataset.themeChoice);
     });
+  });
+
+  const savedTheme = localStorage.getItem("chain_profile_theme_preview");
+  if (savedTheme && document.querySelector(".premium-profile-shell")) {
+    body.classList.add(`profile-theme-${savedTheme}`);
+    document.querySelector(".premium-profile-shell")?.setAttribute("data-theme", savedTheme);
+  }
+
+  const animateNumber = (element) => {
+    const target = Number(element.dataset.countUp || "0");
+    if (!Number.isFinite(target) || target <= 0) {
+      element.textContent = "0";
+      return;
+    }
+    const duration = 900;
+    const start = performance.now();
+    const formatter = new Intl.NumberFormat();
+    const tick = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      element.textContent = formatter.format(Math.round(target * eased));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+
+  const countObserver = "IntersectionObserver" in window
+    ? new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          animateNumber(entry.target);
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.4 })
+    : null;
+
+  document.querySelectorAll("[data-count-up]").forEach((counter) => {
+    if (countObserver) countObserver.observe(counter);
+    else animateNumber(counter);
+  });
+
+  const qrPopover = document.querySelector("[data-profile-qr-popover]");
+  const qrCode = document.querySelector("[data-profile-qr-code]");
+  const buildQr = (value) => {
+    if (!qrCode) return;
+    qrCode.innerHTML = "";
+    const seed = [...String(value || window.location.href)].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    for (let index = 0; index < 169; index += 1) {
+      const cell = document.createElement("span");
+      const row = Math.floor(index / 13);
+      const col = index % 13;
+      const finder =
+        (row < 4 && col < 4) ||
+        (row < 4 && col > 8) ||
+        (row > 8 && col < 4);
+      const dark = finder || ((index * 17 + seed + row * col) % 5 < 2);
+      cell.classList.toggle("is-dark", dark);
+      qrCode.appendChild(cell);
+    }
+  };
+
+  document.querySelectorAll("[data-profile-qr]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const path = button.dataset.profileUrl || window.location.pathname;
+      buildQr(`${window.location.origin}${path}`);
+      if (qrPopover) qrPopover.hidden = false;
+    });
+  });
+
+  document.querySelectorAll("[data-profile-qr-close]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (qrPopover) qrPopover.hidden = true;
+    });
+  });
+
+  qrPopover?.addEventListener("click", (event) => {
+    if (event.target === qrPopover) qrPopover.hidden = true;
   });
 
   document.querySelectorAll("[data-profile-follow]").forEach((button) => {

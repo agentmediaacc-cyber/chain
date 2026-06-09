@@ -642,6 +642,13 @@ function hideCallUI() {
     if (callScreen) callScreen.classList.remove('active');
 }
 
+const _origHideCallUI = hideCallUI;
+hideCallUI = function() {
+    const modal = document.getElementById('incoming-call-modal');
+    if (modal) modal.style.display = 'none';
+    if (_origHideCallUI) _origHideCallUI();
+};
+
 function updateMuteButton() {
     const btn = document.getElementById('muteBtn') || document.querySelector('[onclick*="toggleMute"]');
     if (btn) {
@@ -988,6 +995,168 @@ window.wRedial = wRedial;
 window.wMarkMissedSeen = wMarkMissedSeen;
 window.renderCallCard = renderCallCard;
 window.bindPhase41SocketEvents = bindPhase41SocketEvents;
+
+/* ---- CALL + MESSAGE SCALE HARDENING ---- */
+
+// Enhanced call state display with all states
+function wUpdateCallState(state, reason) {
+    const statusEl = document.getElementById('call-status-text');
+    const states = {
+        idle: { text: 'Ready', color: '#9ca3af' },
+        ringing: { text: 'Ringing...', color: '#f59e0b' },
+        connecting: { text: 'Connecting...', color: '#f59e0b' },
+        connected: { text: 'Connected', color: '#22c55e' },
+        reconnecting: { text: 'Reconnecting...', color: '#ef4444' },
+        ended: { text: 'Call ended', color: '#9ca3af' },
+        failed: { text: reason || 'Call failed', color: '#ef4444' },
+        missed: { text: 'Missed call', color: '#ef4444' },
+        busy: { text: 'Line busy', color: '#f59e0b' },
+    };
+    const s = states[state] || { text: state, color: '#9ca3af' };
+    if (statusEl) {
+        statusEl.textContent = s.text;
+        statusEl.style.color = s.color;
+    }
+}
+
+// Reconnecting overlay with retry count
+function showReconnectingOverlayPhase50(retryCount) {
+    let overlay = document.getElementById('reconnecting-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'reconnecting-overlay';
+        overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:300;';
+        overlay.innerHTML = '<div style="font-size:40px;margin-bottom:12px;"><i class="fas fa-sync-alt fa-spin"></i></div>' +
+            '<p style="color:#fff;font-size:16px;margin-bottom:8px;">Reconnecting...</p>' +
+            '<p id="reconnect-retry-text" style="color:#9ca3af;font-size:13px;"></p>';
+        const container = document.getElementById('call-overlay') || document.body;
+        container.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+    const retryEl = document.getElementById('reconnect-retry-text');
+    if (retryEl) retryEl.textContent = 'Attempt ' + (retryCount || 1);
+    if (CHAIN_WEBRTC.callFailedTimer) clearTimeout(CHAIN_WEBRTC.callFailedTimer);
+    CHAIN_WEBRTC.callFailedTimer = setTimeout(function() {
+        if (CHAIN_WEBRTC.currentCallId) {
+            wUpdateCallState('failed', 'Connection lost');
+            if (CHAIN_WEBRTC.currentTargetId) {
+                CHAIN_WEBRTC.socket.emit('call:failed', {
+                    call_id: CHAIN_WEBRTC.currentCallId,
+                    target_id: CHAIN_WEBRTC.currentTargetId,
+                    reason: 'timeout'
+                });
+            }
+            wEndCall();
+        }
+    }, 30000);
+}
+
+// Call failed reason display
+function showCallFailedReason(reason) {
+    let banner = document.getElementById('call-failed-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'call-failed-banner';
+        banner.style.cssText = 'position:absolute;top:60px;left:0;right:0;background:#ef4444;color:#fff;text-align:center;padding:8px 16px;font-size:13px;z-index:250;';
+        const container = document.getElementById('call-overlay') || document.body;
+        container.appendChild(banner);
+    }
+    const messages = {
+        'network_error': 'Call failed due to network error',
+        'timeout': 'Call failed - no response',
+        'declined': 'Call was declined',
+        'busy': 'User is busy',
+        'ice_failed': 'Connection failed - ICE negotiation failed',
+        'dtls_failed': 'Connection failed - DTLS error',
+        'server_error': 'Call failed due to server error',
+    };
+    banner.textContent = messages[reason] || 'Call failed: ' + (reason || 'unknown error');
+    banner.style.display = 'block';
+    setTimeout(function() { if (banner) banner.style.display = 'none'; }, 8000);
+}
+
+// Incoming call modal that appears above all pages
+function showIncomingCallModal(data) {
+    let modal = document.getElementById('incoming-call-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'incoming-call-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;';
+        modal.innerHTML = '<div style="background:#1a1a2e;border-radius:16px;padding:32px;text-align:center;max-width:360px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
+            '<div style="font-size:64px;margin-bottom:16px;color:#22c55e;"><i class="fas fa-phone"></i></div>' +
+            '<h2 style="color:#fff;margin:0 0 8px 0;font-size:20px;">Incoming Call</h2>' +
+            '<p id="incoming-caller-name" style="color:#9ca3af;margin:0 0 24px 0;font-size:15px;">Someone is calling...</p>' +
+            '<p id="incoming-call-type" style="color:#6b7280;margin:0 0 24px 0;font-size:13px;">Audio call</p>' +
+            '<div style="display:flex;gap:16px;justify-content:center;">' +
+            '<button id="incoming-decline-btn" style="background:#ef4444;color:#fff;border:none;border-radius:50%;width:56px;height:56px;font-size:24px;cursor:pointer;"><i class="fas fa-phone-slash"></i></button>' +
+            '<button id="incoming-accept-btn" style="background:#22c55e;color:#fff;border:none;border-radius:50%;width:56px;height:56px;font-size:24px;cursor:pointer;"><i class="fas fa-phone"></i></button>' +
+            '</div></div>';
+        document.body.appendChild(modal);
+
+        document.getElementById('incoming-accept-btn').addEventListener('click', function() {
+            modal.style.display = 'none';
+            if (window.wAcceptCall) wAcceptCall();
+        });
+        document.getElementById('incoming-decline-btn').addEventListener('click', function() {
+            modal.style.display = 'none';
+            if (window.wRejectCall) wRejectCall();
+        });
+    }
+    modal.style.display = 'flex';
+    const nameEl = document.getElementById('incoming-caller-name');
+    if (nameEl) nameEl.textContent = data.caller_name || 'Someone';
+    const typeEl = document.getElementById('incoming-call-type');
+    if (typeEl) typeEl.textContent = (data.call_type || 'audio') + ' call';
+}
+
+// Override incoming call handler to use modal
+const _origHandleIncoming = handleIncomingCall;
+handleIncomingCall = function(data) {
+    if (CHAIN_WEBRTC.currentCallId) {
+        CHAIN_WEBRTC.socket.emit('call:busy', { call_id: data.call_id });
+        return;
+    }
+    stopCallTimeoutTimer();
+    CHAIN_WEBRTC.currentCallId = data.call_id;
+    CHAIN_WEBRTC.currentTargetId = data.caller_id;
+    CHAIN_WEBRTC.currentCallType = data.call_type || 'audio';
+    showIncomingCallModal(data);
+    startRingtone();
+    CHAIN_WEBRTC.socket.emit('call:ringing', {
+        call_id: data.call_id,
+        target_id: data.caller_id
+    });
+};
+
+// Override cleanup to hide modal
+const _origCleanup = cleanupCall;
+cleanupCall = function() {
+    const modal = document.getElementById('incoming-call-modal');
+    if (modal) modal.style.display = 'none';
+    hideReconnectingOverlay();
+    if (_origCleanup) _origCleanup();
+};
+
+// Override handleRemoteFailed to show reason
+const _origRemoteFailed = handleRemoteFailed;
+handleRemoteFailed = function(data) {
+    showCallFailedReason(data.reason);
+    if (_origRemoteFailed) _origRemoteFailed(data);
+};
+
+// Override handleRemoteReconnecting to show retry count
+const _origRemoteReconnecting = handleRemoteReconnecting;
+handleRemoteReconnecting = function(data) {
+    const retryCount = data.retry_count || 1;
+    showReconnectingOverlayPhase50(retryCount);
+    if (_origRemoteReconnecting) _origRemoteReconnecting(data);
+};
+
+/* ---- CALL + MESSAGE SCALE HARDENING Exports ---- */
+window.wUpdateCallState = wUpdateCallState;
+window.showReconnectingOverlayPhase50 = showReconnectingOverlayPhase50;
+window.showCallFailedReason = showCallFailedReason;
+window.showIncomingCallModal = showIncomingCallModal;
 
 /* ---- Export for Socket.IO init ---- */
 window.wCallInit = wCallInit;

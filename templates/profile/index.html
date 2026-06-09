@@ -19,6 +19,8 @@
 {% set rooms = content_data.get('rooms', []) %}
 {% set products = marketplace_data.get('items', []) %}
 {% set saved = saved_items or [] %}
+{% set wallet_transactions = wallet_data.transactions or [] %}
+{% set ai_suggestions = ai_data.suggestions or [] %}
 {% set skills = portfolio_data.get('skills', []) or profile.skills or [] %}
 {% set profile_location = profile.current_location or profile.location or profile.town or profile.region or profile.country_origin or 'Namibia' %}
 {% set display_name = profile.display_name or profile.full_name or profile.username or 'CHAIN Member' %}
@@ -34,16 +36,31 @@
         <div class="profile-content-grid">
             {% for post in posts %}
             <article class="profile-post-card">
-                {% if post.video_url %}
-                <video src="{{ post.video_url }}" controls playsinline preload="metadata"></video>
-                {% elif post.media_url %}
-                <img src="{{ post.media_url }}" alt="{{ post.caption or 'Post' }}">
-                {% else %}
-                <div class="post-text-preview"><i class="fas fa-quote-left"></i></div>
-                {% endif %}
-                <div>
+                <header class="post-card-head">
+                    <span class="post-avatar">{% if profile.avatar_url %}<img src="{{ profile.avatar_url }}" alt="{{ display_name }}">{% else %}{{ (display_name or 'C')[0]|upper }}{% endif %}</span>
+                    <div>
+                        <strong>{{ display_name }}</strong>
+                        <small>{{ post.town_tag or (post.created_at|datetime if post.created_at else 'Recent') }}</small>
+                    </div>
+                    <button type="button" aria-label="More post options"><i class="fas fa-ellipsis"></i></button>
+                </header>
+                <div class="post-media-frame">
+                    {% if post.video_url %}
+                    <video src="{{ post.video_url }}" controls playsinline preload="metadata"></video>
+                    {% elif post.media_url %}
+                    <img src="{{ post.media_url }}" alt="{{ post.caption or 'Post' }}">
+                    {% else %}
+                    <div class="post-text-preview"><i class="fas fa-quote-left"></i></div>
+                    {% endif %}
+                </div>
+                <div class="post-card-actions">
+                    <span><i class="far fa-heart"></i>{{ post.likes_count or post.likes or 0 }}</span>
+                    <span><i class="far fa-comment"></i>{{ post.comments_count or post.comments or 0 }}</span>
+                    <span><i class="fas fa-share"></i>{{ post.shares_count or post.shares or 0 }}</span>
+                    <span><i class="far fa-bookmark"></i></span>
+                </div>
+                <div class="post-card-caption">
                     <h3>{{ (post.caption or post.body or 'Untitled post')|hashtag_links|safe }}</h3>
-                    <p>{{ post.town_tag or (post.created_at|datetime if post.created_at else 'Recent') }}</p>
                 </div>
             </article>
             {% endfor %}
@@ -62,14 +79,21 @@
         <div class="profile-reel-grid">
             {% for reel in reels %}
             <article class="profile-reel-card">
-                {% if reel.video_url or reel.media_url %}
-                <video src="{{ reel.video_url or reel.media_url }}" controls playsinline preload="metadata"></video>
-                {% elif reel.thumbnail_url %}
-                <img src="{{ reel.thumbnail_url }}" alt="{{ reel.caption or 'Reel' }}">
-                {% else %}
-                <div class="post-text-preview"><i class="fas fa-film"></i></div>
-                {% endif %}
-                <h3>{{ (reel.caption or 'Untitled reel')|hashtag_links|safe }}</h3>
+                <div class="reel-media-frame">
+                    {% if reel.video_url or reel.media_url %}
+                    <video src="{{ reel.video_url or reel.media_url }}" controls playsinline preload="metadata"></video>
+                    {% elif reel.thumbnail_url %}
+                    <img src="{{ reel.thumbnail_url }}" alt="{{ reel.caption or 'Reel' }}">
+                    {% else %}
+                    <div class="post-text-preview"><i class="fas fa-film"></i></div>
+                    {% endif %}
+                    <div class="reel-side-metrics">
+                        <span><i class="fas fa-play"></i>{{ reel.views_count or reel.views or 0 }}</span>
+                        <span><i class="fas fa-heart"></i>{{ reel.likes_count or reel.likes or 0 }}</span>
+                        <span><i class="fas fa-comment"></i>{{ reel.comments_count or reel.comments or 0 }}</span>
+                    </div>
+                    <h3>{{ (reel.caption or 'Untitled reel')|hashtag_links|safe }}</h3>
+                </div>
             </article>
             {% endfor %}
         </div>
@@ -161,6 +185,17 @@
 
             <article class="profile-card creator-social-card">
                 <h3><i class="fas fa-clapperboard"></i>Creator Studio</h3>
+                <div class="creator-level-strip">
+                    <span>Creator level</span>
+                    <strong>{{ creator_data.level or creator_data.creator_level or profile.rank or 'Rising Creator' }}</strong>
+                </div>
+                <div class="creator-growth-graph" aria-label="Creator growth graph">
+                    <span style="height: 42%"></span><span style="height: 58%"></span><span style="height: 46%"></span><span style="height: 72%"></span><span style="height: 64%"></span><span style="height: 86%"></span>
+                </div>
+                <div class="trend-row">
+                    <span><i class="fas fa-arrow-trend-up"></i>Subscribers {{ creator_data.subscriber_trend or '+0%' }}</span>
+                    <span><i class="fas fa-arrow-trend-up"></i>Earnings {{ creator_data.earnings_trend or '+0%' }}</span>
+                </div>
                 <div class="metric-grid">
                     <div><span>Earnings</span><strong>N$ {{ creator_data.earnings or 0 }}</strong></div>
                     <div><span>Subscribers</span><strong>{{ creator_data.subscribers or 0 }}</strong></div>
@@ -172,10 +207,23 @@
 
             <article class="profile-card wallet-social-card">
                 <h3><i class="fas fa-wallet"></i>Wallet</h3>
+                <div class="secure-badge"><i class="fas fa-lock"></i>Secure CHAIN wallet</div>
                 <div class="wallet-balance">N$ {{ '%.2f'|format(wallet_data.coin_balance or profile.wallet_balance or 0) }}</div>
                 <div class="metric-grid">
                     <div><span>Gifts</span><strong>N$ {{ '%.2f'|format(wallet_data.gift_earnings or 0) }}</strong></div>
                     <div><span>Pending</span><strong>N$ {{ '%.2f'|format(wallet_data.pending_withdrawal or 0) }}</strong></div>
+                </div>
+                <div class="wallet-status-row">
+                    <span><i class="fas fa-circle-check"></i>{{ wallet_data.withdrawal_status or 'Withdrawals ready after verification' }}</span>
+                </div>
+                <div class="transaction-preview">
+                    <strong>Recent transactions</strong>
+                    {% for tx in wallet_transactions[:3] %}
+                    <span><i class="fas fa-receipt"></i>{{ tx.label or tx.type or 'Wallet activity' }} <b>{{ tx.amount or '' }}</b></span>
+                    {% else %}
+                    <span><i class="fas fa-gift"></i>Gifts and payouts will appear here</span>
+                    <span><i class="fas fa-arrow-right-arrow-left"></i>No recent wallet movement</span>
+                    {% endfor %}
                 </div>
                 <div class="profile-inline-actions"><a href="/wallet/transactions">Transactions</a><a href="/wallet/payouts">Withdraw</a></div>
             </article>
@@ -183,17 +231,39 @@
             <article class="profile-card dating-social-card">
                 <h3><i class="fas fa-heart"></i>Dating</h3>
                 <p>{{ 'Dating mode is on.' if dating_data.enabled else 'Dating mode is off.' }}</p>
+                <div class="readiness-stack">
+                    <div><span>Dating profile completion</span><strong>{{ dating_data.completion or dating_data.completion_percent or 0 }}%</strong></div>
+                    <div class="mini-progress"><span style="width: {{ dating_data.completion or dating_data.completion_percent or 0 }}%"></span></div>
+                    <div><span>Match readiness</span><strong>{{ dating_data.match_readiness or dating_data.readiness_score or 0 }}%</strong></div>
+                    <div class="mini-progress"><span style="width: {{ dating_data.match_readiness or dating_data.readiness_score or 0 }}%"></span></div>
+                </div>
+                <div class="dating-trust-indicator {{ 'is-trusted' if profile.is_verified or profile.verified else 'needs-trust' }}">
+                    <i class="fas fa-shield-heart"></i>{{ 'Verified dating trust' if profile.is_verified or profile.verified else 'Verify to boost dating trust' }}
+                </div>
                 {% if not profile.is_verified %}<p class="trust-note"><i class="fas fa-shield-halved"></i>Verification improves dating trust.</p>{% endif %}
                 <a href="/matching/">{{ 'Manage dating' if dating_data.enabled else 'Turn on dating' }}</a>
             </article>
 
             <article class="profile-card ai-social-card">
                 <h3><i class="fas fa-robot"></i>CHAIN AI</h3>
+                <div class="ai-score-orb">
+                    <strong>{{ ai_data.optimization_score or ai_data.profile_score or 72 }}</strong>
+                    <span>Profile score</span>
+                </div>
                 <div class="metric-grid">
                     <div><span>Messages handled</span><strong>{{ 'Ready' if ai_data.message_assistant else 0 }}</strong></div>
                     <div><span>Appointments</span><strong>{{ 'Ready' if ai_data.schedule_assistant else 0 }}</strong></div>
                     <div><span>Recommendations</span><strong>{{ 'Ready' if ai_data.assistant_enabled else 0 }}</strong></div>
                     <div><span>Suggestions</span><strong>{{ 'Ready' if ai_data.bio_writer else 0 }}</strong></div>
+                </div>
+                <div class="ai-suggestion-list">
+                    {% for suggestion in ai_suggestions[:3] %}
+                    <span><i class="fas fa-wand-magic-sparkles"></i>{{ suggestion }}</span>
+                    {% else %}
+                    <span><i class="fas fa-wand-magic-sparkles"></i>Add a sharper first-line bio</span>
+                    <span><i class="fas fa-chart-line"></i>Post a reel to lift discovery</span>
+                    <span><i class="fas fa-calendar-check"></i>Enable appointment replies</span>
+                    {% endfor %}
                 </div>
                 <button type="button" disabled>Manage AI</button>
             </article>
@@ -202,10 +272,16 @@
                 <h3><i class="fas fa-trophy"></i>Achievements</h3>
                 <div class="achievement-grid">
                     {% for achievement in achievements_list %}
-                    <div class="achievement-card {% if achievement.earned %}is-earned{% else %}is-locked{% endif %}"><i class="fas {{ 'fa-trophy' if achievement.earned else 'fa-lock' }}"></i><span>{{ achievement.label }}</span></div>
+                    {% set achievement_progress = 100 if achievement.earned else (achievement.progress or loop.index * 12) %}
+                    <div class="achievement-card {% if achievement.earned %}is-earned{% else %}is-locked{% endif %}" title="{{ achievement.description or achievement.label }}">
+                        <i class="fas {{ 'fa-trophy' if achievement.earned else 'fa-lock' }}"></i>
+                        <span>{{ achievement.label }}</span>
+                        <small>{{ achievement_progress }}%</small>
+                        <em><b style="width: {{ achievement_progress }}%"></b></em>
+                    </div>
                     {% else %}
                     {% for label in ['Top Creator', 'First Reel', 'First Sale', '100 Likes', 'Verified User', 'Trending Creator'] %}
-                    <div class="achievement-card is-locked"><i class="fas fa-lock"></i><span>{{ label }}</span></div>
+                    <div class="achievement-card is-locked" title="{{ label }} unlocks as your CHAIN profile grows."><i class="fas fa-lock"></i><span>{{ label }}</span><small>{{ loop.index * 10 }}%</small><em><b style="width: {{ loop.index * 10 }}%"></b></em></div>
                     {% endfor %}
                     {% endfor %}
                 </div>
@@ -215,7 +291,7 @@
                 <h3><i class="fas fa-palette"></i>Profile Themes</h3>
                 <div class="theme-chip-row">
                     {% for choice in theme_choices %}
-                    <button type="button" class="theme-chip theme-{{ choice|lower|replace(' ', '-') }}" data-theme-choice="{{ choice|lower|replace(' ', '-') }}">{{ choice }}</button>
+                    <button type="button" class="theme-chip theme-{{ choice|lower|replace(' ', '-') }}" data-theme-choice="{{ choice|lower|replace(' ', '-') }}"><span class="theme-preview-dots"><i></i><i></i><i></i></span><b>{{ choice }}</b></button>
                     {% endfor %}
                 </div>
             </article>
@@ -256,4 +332,13 @@
     <a href="/messages/start/{{ profile.id }}"><i class="fas fa-comment"></i><span>Message</span></a>
     <a href="/calls/start/{{ profile.id }}/audio"><i class="fas fa-phone"></i><span>Call</span></a>
 </div>
+
+{% if own_profile %}
+<nav class="profile-mobile-createbar" aria-label="Create on CHAIN">
+    <a href="/posts/create"><i class="fas fa-square-plus"></i><span>Post</span></a>
+    <a href="/reels/upload"><i class="fas fa-film"></i><span>Reel</span></a>
+    <a href="/status/create"><i class="fas fa-circle-notch"></i><span>Story</span></a>
+    <a href="{{ live_data.go_live_url or '/live/studio' }}"><i class="fas fa-video"></i><span>Live</span></a>
+</nav>
+{% endif %}
 {% endblock %}

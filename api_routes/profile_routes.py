@@ -269,7 +269,7 @@ def _resolve_profile_route(username=None, user_id=None):
 
     if not profile:
         log_warning("public_profile_missing", username=username, user_id=user_id)
-        return render_template("profile/not_found.html"), 404
+        return render_template("profile/not_found.html", username=username or user_id or ''), 404
 
     if viewer and viewer.get("id") != profile.get("id"):
         record_profile_view(profile.get("id"), viewer.get("id"))
@@ -503,7 +503,7 @@ def view_profile(username=None, user_id=None):
         return _resolve_profile_route(username=username, user_id=user_id)
     except Exception as error:
         log_error("view_profile_failed", username=username, user_id=user_id, error=str(error))
-        return render_template("profile/not_found.html"), 404
+        return render_template("profile/not_found.html", username=username or user_id or ''), 404
 
 
 @profile_bp.route("", methods=["GET"])
@@ -517,7 +517,7 @@ def public_profile(username):
         return _resolve_profile_route(username=username)
     except Exception as error:
         log_error("public_profile_failed", username=username, error=str(error))
-        return render_template("profile/not_found.html"), 404
+        return render_template("profile/not_found.html", username=username or ''), 404
 
 
 @profile_bp.route("/api/current", methods=["GET"])

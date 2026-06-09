@@ -8,6 +8,7 @@
 {% set completion_data = completion or {'percentage': 0, 'missing_fields': []} %}
 {% set level_data = level or {'title': 'New Member', 'score': 0} %}
 {% set pinned_data = pinned or {'posts': [], 'reels': [], 'products': []} %}
+{% set stories = content_data.get('stories', []) %}
 {% set profile_location = profile.current_location or profile.location or profile.town or profile.region or profile.country_origin or 'Namibia' %}
 {% set display_name = profile.display_name or profile.full_name or profile.username or 'CHAIN Member' %}
 {% set profile_rank = profile.rank or level_data.title or 'New Member' %}
@@ -15,12 +16,16 @@
 {% set last_seen = presence.last_seen|datetime if presence and presence.last_seen else (profile.last_login_at|datetime if profile.last_login_at else 'recently') %}
 {% set public_url = '/profile/@' ~ (profile.username or '') %}
 {% set score_total = profile.chain_score or level_data.score or 0 %}
+{% set xp_progress = level_data.progress_pct or 0 %}
 {% set posts_count = stats_data.posts or stats_data.posts_count or public_stats.posts or 0 %}
 {% set reels_count = stats_data.reels or stats_data.reels_count or public_stats.reels or 0 %}
 {% set followers_count = stats_data.followers or stats_data.followers_count or public_stats.followers or profile.followers_count or 0 %}
 {% set following_count = stats_data.following or stats_data.following_count or profile.following_count or 0 %}
+{% set friends_count = stats_data.friends or stats_data.friends_count or profile.friends_count or 0 %}
 {% set likes_count = stats_data.likes or stats_data.likes_count or public_stats.likes or profile.total_likes or 0 %}
 {% set views_count = stats_data.views or stats_data.views_count or profile.profile_views or 0 %}
+{% set visitor_count = stats_data.visitors or stats_data.unique_visitors or stats_data.profile_visitors or views_count %}
+{% set visitors_week = stats_data.visitors_this_week or stats_data.visitors_week or stats_data.weekly_visitors or visitor_count %}
 
 <div class="profile-mini-header" data-mini-profile>
     <div class="mini-avatar">{{ (display_name or 'C')[0]|upper }}</div>
@@ -91,6 +96,13 @@
                 <span><i class="fas fa-link"></i>{{ public_url }}</span>
                 <button type="button" data-copy-profile="{{ public_url }}"><i class="fas fa-copy"></i>Copy</button>
             </div>
+            <div class="profile-xp-bar" aria-label="Creator level progress">
+                <div>
+                    <span>Creator Level XP</span>
+                    <strong>{{ profile_rank }}</strong>
+                </div>
+                <div class="profile-xp-track"><span style="width: {{ xp_progress }}%"></span></div>
+            </div>
         </div>
 
         <div class="profile-main-actions">
@@ -103,19 +115,22 @@
             <a href="/calls/start/{{ profile.id }}/audio" class="profile-btn"><i class="fas fa-phone-volume"></i>Audio</a>
             <a href="/calls/start/{{ profile.id }}/video" class="profile-btn"><i class="fas fa-video"></i>Video</a>
             <button type="button" class="profile-btn" data-share-profile><i class="fas fa-share-alt"></i>Share</button>
+            <button type="button" class="profile-btn" data-profile-qr data-profile-url="{{ public_url }}"><i class="fas fa-qrcode"></i>QR</button>
             <button type="button" class="profile-btn" aria-label="More profile actions"><i class="fas fa-ellipsis"></i>More</button>
         </div>
     </div>
 </section>
 
 <section class="profile-stats" aria-label="Profile stats">
-    <div><strong>{{ posts_count }}</strong><span>Posts</span></div>
-    <div><strong>{{ reels_count }}</strong><span>Reels</span></div>
-    <div><strong>{{ followers_count }}</strong><span>Followers</span></div>
-    <div><strong>{{ following_count }}</strong><span>Following</span></div>
-    <div><strong>{{ likes_count }}</strong><span>Likes</span></div>
-    <div><strong>{{ views_count }}</strong><span>Views</span></div>
-    <div><strong>{{ score_total }}</strong><span>CHAIN Score</span></div>
+    <div><strong data-count-up="{{ posts_count }}">{{ posts_count }}</strong><span>Posts</span></div>
+    <div><strong data-count-up="{{ reels_count }}">{{ reels_count }}</strong><span>Reels</span></div>
+    <div><strong data-count-up="{{ followers_count }}">{{ followers_count }}</strong><span>Followers</span></div>
+    <div><strong data-count-up="{{ following_count }}">{{ following_count }}</strong><span>Following</span></div>
+    <div><strong data-count-up="{{ friends_count }}">{{ friends_count }}</strong><span>Friends</span></div>
+    <div><strong data-count-up="{{ likes_count }}">{{ likes_count }}</strong><span>Likes</span></div>
+    <div><strong data-count-up="{{ views_count }}">{{ views_count }}</strong><span>Profile Views</span></div>
+    <div><strong data-count-up="{{ visitors_week }}">{{ visitors_week }}</strong><span>Visitors This Week</span></div>
+    <div><strong data-count-up="{{ score_total }}">{{ score_total }}</strong><span>CHAIN Score</span></div>
 </section>
 
 <div class="profile-top-grid">
@@ -159,14 +174,34 @@
     </section>
 </div>
 
-<section class="profile-highlight-row" aria-label="Profile highlights">
-    {% for label, icon in [('Work', 'fa-briefcase'), ('Family', 'fa-users'), ('Travel', 'fa-plane'), ('Business', 'fa-store'), ('Live', 'fa-video'), ('Add Highlight', 'fa-plus')] %}
-    <button type="button" class="profile-highlight">
-        <span><i class="fas {{ icon }}"></i></span>
-        <strong>{{ label }}</strong>
+<section class="profile-highlight-row" aria-label="Profile stories and highlights">
+    {% for story in stories[:5] %}
+    <button type="button" class="profile-highlight has-image">
+        <span>{% if story.media_url %}<img src="{{ story.media_url }}" alt="{{ story.caption or 'Story' }}">{% else %}<i class="fas fa-circle-play"></i>{% endif %}</span>
+        <strong>{{ story.caption or 'Story' }}</strong>
     </button>
+    {% else %}
+        {% for label, icon in [('Work', 'fa-briefcase'), ('Family', 'fa-users'), ('Travel', 'fa-plane'), ('Business', 'fa-store'), ('Live', 'fa-video')] %}
+        <button type="button" class="profile-highlight">
+            <span><i class="fas {{ icon }}"></i></span>
+            <strong>{{ label }}</strong>
+        </button>
+        {% endfor %}
     {% endfor %}
+    <a href="{{ '/status/create' if own_profile else '#posts' }}" class="profile-highlight add-highlight">
+        <span><i class="fas fa-plus"></i></span>
+        <strong>Add Story</strong>
+    </a>
 </section>
+
+<div class="profile-qr-popover" data-profile-qr-popover hidden>
+    <div class="profile-qr-card">
+        <button type="button" data-profile-qr-close aria-label="Close QR"><i class="fas fa-xmark"></i></button>
+        <div class="profile-qr-code" data-profile-qr-code></div>
+        <strong>{{ display_name }}</strong>
+        <span>{{ public_url }}</span>
+    </div>
+</div>
 
 <section class="profile-featured profile-section">
     <div class="profile-section-head">
