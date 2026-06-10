@@ -14,3 +14,8 @@ instance/
 # mac/node
 .DS_Store
 node_modules/
+
+# Local/generated files
+secrets/
+backups/
+static/uploads/
