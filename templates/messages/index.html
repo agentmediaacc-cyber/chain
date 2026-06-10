@@ -823,8 +823,12 @@ body.chain-message-mode .container{max-width:none!important;width:100%!important
 {% block extra_js %}
 <script src="/static/js/push_notifications.js"></script>
 <script src="/static/js/notification_badge.js"></script>
+<script src="{{ url_for('static', filename='js/message_premium_features.js') }}"></script>
 <script>
 (function(){
+    if (window._chainMessagesInit) return;
+    window._chainMessagesInit = true;
+    try {
     document.body.classList.add('chain-message-mode');
 
     const $ = id => document.getElementById(id);
@@ -1777,61 +1781,75 @@ body.chain-message-mode .container{max-width:none!important;width:100%!important
     }
 
     fetch('/messages/api/online',{method:'POST'}).catch(()=>{});
-    loadUnreadCount();
-    setInterval(loadUnreadCount, 30000);
 
-    // Socket.io real-time connection
-    const socket = (typeof io !== 'undefined')
-        ? io({ transports: ['websocket', 'polling'], upgrade: true, reconnection: true })
-        : { on(){}, emit(){}, connected:false };
+    // Socket.io real-time connection (defensive)
+    var socket;
+    try {
+        socket = (typeof io !== 'undefined')
+            ? io({ transports: ['websocket', 'polling'], upgrade: false, reconnection: true, reconnectionAttempts: 5 })
+            : { on: function(){}, emit: function(){}, connected: false };
+    } catch(e) {
+        socket = { on: function(){}, emit: function(){}, connected: false };
+    }
     socket.on('connect', () => {
         socket.emit('join_thread', { thread_id: 'lobby' });
     });
 
-    socket.on('presence_update', (data) => {
-        const card = document.querySelector(`.thread-card[data-id="${data.thread_id}"]`);
-        if(card){
-            const dot = card.querySelector('.thread-online-dot');
-            if(dot){
-                dot.className = 'thread-online-dot ' + (data.is_online ? 'online' : 'offline');
-            }
-            const pill = card.querySelector('.thread-pill.live');
-            if(pill) pill.remove();
-            if(data.is_online){
-                const meta = card.querySelector('.thread-meta');
-                if(meta && !meta.querySelector('.thread-pill.live')){
-                    const live = document.createElement('span');
-                    live.className = 'thread-pill live';
-                    live.textContent = 'Online';
-                    meta.appendChild(live);
+    if (socket && typeof socket.on === 'function') {
+        socket.on('presence_update', function(data) {
+            try {
+                if (!data) return;
+                var card = document.querySelector('.thread-card[data-id="' + (data.thread_id || '') + '"]');
+                if(card){
+                    var dot = card.querySelector('.thread-online-dot');
+                    if(dot){
+                        dot.className = 'thread-online-dot ' + (data.is_online ? 'online' : 'offline');
+                    }
+                    var pill = card.querySelector('.thread-pill.live');
+                    if(pill) pill.remove();
+                    if(data.is_online){
+                        var meta = card.querySelector('.thread-meta');
+                        if(meta && !meta.querySelector('.thread-pill.live')){
+                            var live = document.createElement('span');
+                            live.className = 'thread-pill live';
+                            live.textContent = 'Online';
+                            meta.appendChild(live);
+                        }
+                    }
                 }
-            }
-        }
-        if(currentThreadId && data.thread_id === currentThreadId){
-            updatePresence(data.is_online, data.last_seen);
-        }
-    });
+                if(currentThreadId && data.thread_id === currentThreadId){
+                    if (typeof updatePresence === 'function') updatePresence(data.is_online, data.last_seen);
+                }
+            } catch(e) {}
+        });
 
-    socket.on('user_typing', (data) => {
-        const line = $('typingLine');
-        if(line && data.thread_id === currentThreadId && data.profile_id !== window.myProfileId) {
-            if(data.typing){
-                line.style.display = 'block';
-                line.textContent = (data.display_name || data.username || 'Someone') + ' is typing...';
-            } else {
-                line.style.display = 'none';
-            }
-        }
-    });
+        socket.on('user_typing', function(data) {
+            try {
+                if (!data) return;
+                var line = $('typingLine');
+                if(line && data.thread_id === currentThreadId && data.profile_id !== window.myProfileId) {
+                    if(data.typing){
+                        line.style.display = 'block';
+                        line.textContent = (data.display_name || data.username || 'Someone') + ' is typing...';
+                    } else {
+                        line.style.display = 'none';
+                    }
+                }
+            } catch(e) {}
+        });
 
-    socket.on('message:new', (data) => {
-        if(data.thread_id && data.thread_id !== currentThreadId){
-            updateThreadBadge(data.thread_id, 1);
-        }
-        if(data.thread_id === currentThreadId){
-            socket.emit('message:seen', { thread_id: currentThreadId });
-        }
-    });
+        socket.on('message:new', function(data) {
+            try {
+                if (!data) return;
+                if(data.thread_id && data.thread_id !== currentThreadId){
+                    if (typeof updateThreadBadge === 'function') updateThreadBadge(data.thread_id, 1);
+                }
+                if(data.thread_id === currentThreadId && socket){
+                    try { socket.emit('message:seen', { thread_id: currentThreadId }); } catch(e) {}
+                }
+            } catch(e) {}
+        });
+    }
 
     // Online/offline status & last seen
     function updatePresence(isOnline, lastSeen){
@@ -1859,7 +1877,21 @@ body.chain-message-mode .container{max-width:none!important;width:100%!important
         } catch(e){}
     }
 
-    setInterval(checkPresence, 15000);
+    } catch(e) {
+        if (typeof console !== 'undefined') console.warn('[chain] messages init error:', e);
+    }
+    // Use longer intervals and only poll when page is visible
+    function _chainSchedule(fn, ms) {
+        function _tick() {
+            if (!document.hidden) { try { fn(); } catch(e) {} }
+        }
+        _tick();
+        setInterval(_tick, ms);
+    }
+    _chainSchedule(function() {
+        if (currentThreadId) { try { checkPresence(); } catch(e) {} }
+    }, 30000);
+    _chainSchedule(loadUnreadCount, 60000);
 })();
 </script>
 <script src="{{ url_for('static', filename='js/group_calls.js') }}"></script>

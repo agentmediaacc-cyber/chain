@@ -44,7 +44,7 @@ def list_threads(profile_id, include_archived=False, folder='primary', limit=30,
     params.extend([limit, offset])
 
     sql = f"""
-        SELECT t.*,
+        SELECT DISTINCT ON (t.id) t.*,
                tm.last_read_at,
                tm.is_pinned,
                tm.is_archived,
@@ -82,7 +82,7 @@ def list_threads(profile_id, include_archived=False, folder='primary', limit=30,
               )
         ) unread ON TRUE
         WHERE tm.profile_id = %s AND t.deleted_at IS NULL {archived_filter} {folder_filter}
-        ORDER BY tm.is_pinned DESC, latest.created_at DESC NULLS LAST, t.updated_at DESC NULLS LAST
+        ORDER BY t.id, tm.is_pinned DESC, latest.created_at DESC NULLS LAST, t.updated_at DESC NULLS LAST
         LIMIT %s OFFSET %s
     """
     threads = request_memoize(

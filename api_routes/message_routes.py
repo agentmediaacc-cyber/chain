@@ -297,10 +297,13 @@ def api_thread_draft(thread_id):
 @login_required
 def api_schedule_message(thread_id):
     profile = get_current_profile()
+    profile_id = (profile or {}).get("id") or session.get("profile_id")
     data = request.get_json(silent=True) or {}
-    if not profile:
+    if not profile_id:
         return jsonify({"error": "Unauthorized"}), 401
-    result = phase29_messages.schedule_message(thread_id, profile["id"], data.get("body") or "", data.get("scheduled_for"), message_type=data.get("message_type", "text"))
+    if not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    result = phase29_messages.schedule_message(thread_id, profile_id, data.get("body") or "", data.get("scheduled_for"), message_type=data.get("message_type", "text"))
     return jsonify({"success": bool(result.get("ok")), **result}), 200
 
 
@@ -678,19 +681,31 @@ def api_retry_message(message_id):
 
 # =========== PHASE 53 — PREMIUM MESSAGING ===========
 
+def _session_profile_id():
+    profile = get_current_profile()
+    return (profile or {}).get("id") or session.get("profile_id")
+
+
+def _message_thread_id_for_access(message_id):
+    return phase29_messages.message_thread_id(message_id)
+
+
 @message_bp.route("/api/messages/<message_id>/transcribe", methods=["POST"])
 @login_required
 def api_transcribe(message_id):
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
+    thread_id = _message_thread_id_for_access(message_id)
+    if thread_id and not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
     result = phase29_messages.transcribe_voice_note(message_id, profile_id)
     return jsonify(result), 200
 
 @message_bp.route("/api/messages/send-hd", methods=["POST"])
 @login_required
 def api_send_hd():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
@@ -709,7 +724,7 @@ def api_send_hd():
 @message_bp.route("/api/poll/create", methods=["POST"])
 @login_required
 def api_poll_create():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
@@ -726,7 +741,7 @@ def api_poll_create():
 @message_bp.route("/api/poll/<poll_id>/vote", methods=["POST"])
 @login_required
 def api_poll_vote(poll_id):
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
@@ -742,7 +757,7 @@ def api_poll_vote(poll_id):
 @message_bp.route("/api/poll/<poll_id>/results", methods=["GET"])
 @login_required
 def api_poll_results(poll_id):
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     thread_id = phase29_messages.get_poll_thread_id(poll_id)
@@ -754,7 +769,7 @@ def api_poll_results(poll_id):
 @message_bp.route("/api/location/share", methods=["POST"])
 @login_required
 def api_location_share():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
@@ -772,7 +787,7 @@ def api_location_share():
 @message_bp.route("/api/location/stop", methods=["POST"])
 @login_required
 def api_location_stop():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
@@ -787,7 +802,7 @@ def api_location_stop():
 @message_bp.route("/api/thread/<thread_id>/disappearing", methods=["POST"])
 @login_required
 def api_disappearing(thread_id):
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     if not can_access_thread(profile_id, thread_id):
@@ -800,7 +815,7 @@ def api_disappearing(thread_id):
 @message_bp.route("/api/thread/<thread_id>/disappearing/settings", methods=["GET"])
 @login_required
 def api_disappearing_settings(thread_id):
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     if not can_access_thread(profile_id, thread_id):
@@ -811,7 +826,7 @@ def api_disappearing_settings(thread_id):
 @message_bp.route("/api/chat/ai/summarize", methods=["POST"])
 @login_required
 def api_ai_summarize():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
@@ -826,7 +841,7 @@ def api_ai_summarize():
 @message_bp.route("/api/chat/ai/find-important", methods=["POST"])
 @login_required
 def api_ai_find_important():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
@@ -841,7 +856,7 @@ def api_ai_find_important():
 @message_bp.route("/api/chat/ai/suggest-reply", methods=["POST"])
 @login_required
 def api_ai_suggest_reply():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
@@ -857,65 +872,98 @@ def api_ai_suggest_reply():
 @message_bp.route("/api/chat/ai/translate", methods=["POST"])
 @login_required
 def api_ai_translate():
+    profile_id = _session_profile_id()
+    if not profile_id:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
     message_id = data.get("message_id")
     target = data.get("target_language", "en")
     if not message_id:
         return jsonify({"ok": False, "error": "message_id required"}), 400
+    thread_id = _message_thread_id_for_access(message_id)
+    if thread_id and not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
     result = phase29_messages.ai_translate(message_id, target)
+    return jsonify(result), 200
+
+@message_bp.route("/api/chat/ai/unread-summary", methods=["POST"])
+@login_required
+def api_ai_unread_summary():
+    profile_id = _session_profile_id()
+    if not profile_id:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    thread_id = data.get("thread_id")
+    if not thread_id:
+        return jsonify({"ok": False, "error": "thread_id required"}), 400
+    if not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    result = phase29_messages.ai_summarize_unread(thread_id, profile_id)
     return jsonify(result), 200
 
 @message_bp.route("/api/wallet/send", methods=["POST"])
 @login_required
 def api_wallet_send():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
+    thread_id = data.get("thread_id")
+    if not thread_id or not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
     result = phase29_messages.wallet_send(
-        data.get("thread_id"), profile_id, data.get("recipient_profile_id"),
+        thread_id, profile_id, data.get("recipient_profile_id"),
         data.get("amount"), data.get("note", ""))
     return jsonify(result), 200
 
 @message_bp.route("/api/wallet/request", methods=["POST"])
 @login_required
 def api_wallet_request():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
+    thread_id = data.get("thread_id")
+    if not thread_id or not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
     result = phase29_messages.wallet_request(
-        data.get("thread_id"), profile_id, data.get("recipient_profile_id"),
+        thread_id, profile_id, data.get("recipient_profile_id"),
         data.get("amount"), data.get("note", ""))
     return jsonify(result), 200
 
 @message_bp.route("/api/wallet/tip", methods=["POST"])
 @login_required
 def api_wallet_tip():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
+    thread_id = data.get("thread_id")
+    if not thread_id or not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
     result = phase29_messages.wallet_tip(
-        data.get("thread_id"), profile_id, data.get("recipient_profile_id"),
+        thread_id, profile_id, data.get("recipient_profile_id"),
         data.get("amount"), data.get("note", ""))
     return jsonify(result), 200
 
 @message_bp.route("/api/wallet/split", methods=["POST"])
 @login_required
 def api_wallet_split():
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
+    thread_id = data.get("thread_id")
+    if not thread_id or not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
     result = phase29_messages.wallet_split(
-        data.get("thread_id"), profile_id, data.get("amount"), data.get("participants"))
+        thread_id, profile_id, data.get("amount"), data.get("participants"))
     return jsonify(result), 200
 
 @message_bp.route("/api/thread/<thread_id>/search", methods=["GET"])
 @login_required
 def api_thread_search(thread_id):
-    profile_id = session.get("profile_id")
+    profile_id = _session_profile_id()
     if not profile_id:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     if not can_access_thread(profile_id, thread_id):
@@ -923,6 +971,100 @@ def api_thread_search(thread_id):
     query = request.args.get("q", "")
     result = phase29_messages.search_thread_messages(thread_id, profile_id, query)
     return jsonify(result), 200
+
+
+@message_bp.route("/api/threads/<thread_id>/scheduled", methods=["GET"])
+@login_required
+def api_scheduled_list(thread_id):
+    profile_id = _session_profile_id()
+    if not profile_id:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    if not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify(phase29_messages.list_scheduled_messages(thread_id, profile_id)), 200
+
+
+@message_bp.route("/api/scheduled/<scheduled_id>/edit", methods=["POST"])
+@login_required
+def api_scheduled_edit(scheduled_id):
+    profile_id = _session_profile_id()
+    if not profile_id:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    result = phase29_messages.update_scheduled_message(
+        scheduled_id,
+        profile_id,
+        scheduled_for=data.get("scheduled_for"),
+        body=data.get("body"),
+    )
+    return jsonify(result), 200
+
+
+@message_bp.route("/api/scheduled/<scheduled_id>/cancel", methods=["POST"])
+@login_required
+def api_scheduled_cancel(scheduled_id):
+    profile_id = _session_profile_id()
+    if not profile_id:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    result = phase29_messages.cancel_scheduled_message(scheduled_id, profile_id, data.get("reason", "cancelled_by_sender"))
+    return jsonify(result), 200
+
+
+@message_bp.route("/api/messages/<message_id>/share/<surface>", methods=["POST"])
+@login_required
+def api_share_message_surface(message_id, surface):
+    profile_id = _session_profile_id()
+    if not profile_id:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    thread_id = _message_thread_id_for_access(message_id)
+    if thread_id and not can_access_thread(profile_id, thread_id):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify(phase29_messages.share_message_to_surface(message_id, profile_id, surface)), 200
+
+@message_bp.route("/api/debug/inbox")
+@login_required
+def api_debug_inbox():
+    profile = get_current_profile()
+    diag = {
+        "profile_id": str(profile.get("id")) if profile else None,
+        "thread_count": 0,
+        "folder": request.args.get('folder', 'primary'),
+        "timestamp": datetime.utcnow().isoformat(),
+        "duplicate_check": None,
+    }
+    if profile and profile.get("id"):
+        profile_id = profile["id"]
+        from services.neon_service import fast_query
+        rows = fast_query(
+            "SELECT t.id, t.thread_type, t.folder_type, COUNT(*) as member_count, "
+            "(SELECT COUNT(*) FROM chain_thread_members tm2 WHERE tm2.thread_id = t.id) as total_members "
+            "FROM chain_message_threads t "
+            "JOIN chain_thread_members tm ON t.id = tm.thread_id "
+            "WHERE tm.profile_id = %s AND t.deleted_at IS NULL "
+            "GROUP BY t.id ORDER BY t.updated_at DESC LIMIT 30",
+            (profile_id,), default=[]
+        )
+        diag["threads"] = rows
+        diag["thread_count"] = len(rows)
+        # Check for duplicate threads (same pair of users)
+        dup_check = fast_query(
+            "SELECT array_agg(t.id) as thread_ids, array_agg(t.updated_at::text) as updated_ats, "
+            "string_agg(DISTINCT p1.id::text, ',') as members "
+            "FROM chain_message_threads t "
+            "JOIN chain_thread_members tm1 ON t.id = tm1.thread_id AND tm1.profile_id = %s "
+            "JOIN chain_thread_members tm2 ON t.id = tm2.thread_id AND tm2.profile_id != %s "
+            "JOIN chain_profiles p1 ON tm2.profile_id = p1.id "
+            "WHERE t.thread_type = 'direct' AND t.deleted_at IS NULL "
+            "GROUP BY t.id HAVING COUNT(DISTINCT tm2.profile_id) = 1",
+            (profile_id, profile_id), default=[]
+        )
+        diag["duplicate_check"] = {
+            "total_direct": len(dup_check),
+            "note": "Check if multiple threads exist for the same conversation partner"
+        }
+    return jsonify(diag), 200
+
 
 @message_bp.route("/api/socket-diagnostics")
 @login_required

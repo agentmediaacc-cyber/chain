@@ -435,13 +435,13 @@
                         </div>
                         {% endif %}
 
-                        {% if 'voice_note' in (msg.message_type or '') and msg.sender_profile_id == profile.id %}
-                        <button class="transcribe-btn" onclick="transcribeVoice('{{ msg.id }}')"><i class="fas fa-language"></i> Transcribe</button>
-                        <div id="transcript-{{ msg.id }}" class="transcript-text" style="display:none;"></div>
-                        {% endif %}
-
-                        {% if msg.transcript %}
-                        <div id="transcript-{{ msg.id }}" class="transcript-text">{{ msg.transcript }}</div>
+                        {% if 'voice_note' in (msg.message_type or '') or 'audio' in (msg.media_type or '') %}
+                        <div class="phase54-transcript-tools" data-phase54="voice-transcription">
+                            <button class="transcribe-btn" onclick="transcribeVoice('{{ msg.id }}')"><i class="fas fa-language"></i> Transcribe</button>
+                            <button class="transcribe-btn" onclick="copyTranscript('{{ msg.id }}')"><i class="far fa-copy"></i> Copy transcript</button>
+                            <button class="transcribe-btn" onclick="toggleTranscript('{{ msg.id }}')"><i class="far fa-eye"></i> Hide/show transcript</button>
+                        </div>
+                        <div id="transcript-{{ msg.id }}" class="transcript-text" {% if not msg.transcript %}style="display:none;"{% endif %}>{{ msg.transcript or '' }}</div>
                         {% endif %}
 
                         {% if msg.ai_suggested_reply %}
@@ -451,6 +451,7 @@
                         <div class="msg-actions">
                             <button class="msg-action" onclick="showReactionPicker(event, '{{ msg.id }}')" title="React"><i class="far fa-face-smile"></i></button>
                             <button class="msg-action" onclick="initReplyFromMsg('{{ msg.id }}')" title="Reply"><i class="fas fa-reply"></i></button>
+                            <button class="msg-action" onclick="translateMessage('{{ msg.id }}')" title="Translate message" data-phase54="translate-message"><i class="fas fa-language"></i></button>
                         </div>
                     </div>
                 </div>
@@ -480,6 +481,10 @@
             <button type="button" class="plus-menu-item" onclick="showSchedulePicker();togglePlusMenu()">
                 <div class="pm-icon" style="background:#6366f1;"><i class="fas fa-clock"></i></div>
                 <span class="pm-label">Schedule</span>
+            </button>
+            <button type="button" class="plus-menu-item" onclick="loadScheduledMessages();togglePlusMenu()">
+                <div class="pm-icon" style="background:#0ea5e9;"><i class="fas fa-calendar-check"></i></div>
+                <span class="pm-label">Scheduled</span>
             </button>
             <button type="button" class="plus-menu-item" onclick="showWalletActions();togglePlusMenu()">
                 <div class="pm-icon" style="background:#22c55e;"><i class="fas fa-wallet"></i></div>
@@ -525,6 +530,24 @@
         </div>
     </div>
 
+    <!-- Phase 54: Scheduled Message Preview/List -->
+    <div id="scheduled-preview" class="phase54-scheduled-card" data-phase54="scheduled-preview" style="display:none;">
+        <div class="scheduled-badge"><i class="far fa-clock"></i> Scheduled</div>
+        <div id="scheduled-preview-text" class="scheduled-preview-text"></div>
+        <div id="scheduled-preview-time" class="scheduled-preview-time"></div>
+        <div class="scheduled-actions">
+            <button type="button" onclick="editScheduledPreview()"><i class="fas fa-pen"></i> Edit time</button>
+            <button type="button" onclick="cancelScheduledPreview()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+    </div>
+    <div id="scheduled-list-panel" class="phase54-scheduled-list" data-phase54-route="/messages/api/threads/{{ thread.id }}/scheduled" style="display:none;">
+        <div class="scheduled-list-head">
+            <strong>Scheduled messages</strong>
+            <button type="button" onclick="hideScheduledList()" aria-label="Close scheduled messages"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="scheduled-list-body"></div>
+    </div>
+
     <!-- Phase 53: Disappearing Timer Menu -->
     <div id="d-timer-menu" class="d-timer-menu" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 4px;">
@@ -544,6 +567,13 @@
         <button type="button" onclick="searchNext()" title="Next"><i class="fas fa-chevron-down"></i></button>
         <span id="search-count" style="font-size:11px;color:var(--chain-muted);min-width:40px;"></span>
         <button type="button" onclick="closeSearch()" title="Close"><i class="fas fa-times"></i></button>
+        <div class="phase54-search-suggestions" data-phase54="ai-message-search">
+            <button type="button" onclick="useSearchSuggestion('location')">Find location</button>
+            <button type="button" onclick="useSearchSuggestion('money')">Find money</button>
+            <button type="button" onclick="useSearchSuggestion('photos')">Find photos</button>
+            <button type="button" onclick="useSearchSuggestion('voice')">Find voice notes</button>
+            <button type="button" onclick="useSearchSuggestion('links')">Find links</button>
+        </div>
     </div>
 
     <!-- Phase 53: Wallet Actions UI -->
@@ -553,10 +583,10 @@
             <i class="fas fa-times" onclick="hideWalletActions()" style="cursor:pointer;color:var(--chain-muted);"></i>
         </div>
         <div class="wallet-action-grid">
-            <div class="wallet-action" onclick="walletTransfer('send')"><div class="wa-icon">💰</div><div class="wa-label">Send Money</div></div>
-            <div class="wallet-action" onclick="walletTransfer('request')"><div class="wa-icon">🙏</div><div class="wa-label">Request Money</div></div>
-            <div class="wallet-action" onclick="walletTransfer('tip')"><div class="wa-icon">⭐</div><div class="wa-label">Tip User</div></div>
-            <div class="wallet-action" onclick="walletTransfer('split')"><div class="wa-icon">🧾</div><div class="wa-label">Split Bill</div></div>
+            <div class="wallet-action" onclick="walletTransfer('send')" data-phase54-wallet="send-money"><div class="wa-icon"><i class="fas fa-paper-plane"></i></div><div class="wa-label">Send money</div></div>
+            <div class="wallet-action" onclick="walletTransfer('request')" data-phase54-wallet="request-money"><div class="wa-icon"><i class="fas fa-hand-holding-dollar"></i></div><div class="wa-label">Request money</div></div>
+            <div class="wallet-action" onclick="walletTransfer('tip')" data-phase54-wallet="tip-creator"><div class="wa-icon"><i class="fas fa-star"></i></div><div class="wa-label">Tip creator</div></div>
+            <div class="wallet-action" onclick="walletTransfer('split')" data-phase54-wallet="split-bill"><div class="wa-icon"><i class="fas fa-receipt"></i></div><div class="wa-label">Split bill</div></div>
         </div>
         <div id="wallet-response" class="wallet-disabled"></div>
     </div>
@@ -568,10 +598,11 @@
             <i class="fas fa-times" onclick="hideAITools()" style="cursor:pointer;color:var(--chain-muted);"></i>
         </div>
         <div class="ai-tools-grid">
-            <div class="ai-tool-btn" onclick="aiAction('summarize')"><div class="at-icon">📝</div>Summarize Chat</div>
-            <div class="ai-tool-btn" onclick="aiAction('find-important')"><div class="at-icon">🔍</div>Find Important</div>
-            <div class="ai-tool-btn" onclick="aiAction('suggest-reply')"><div class="at-icon">💬</div>Suggest Reply</div>
-            <div class="ai-tool-btn" onclick="aiAction('translate')"><div class="at-icon">🌐</div>Translate</div>
+            <div class="ai-tool-btn" onclick="aiAction('summarize')"><div class="at-icon"><i class="fas fa-list"></i></div>Summarize Chat</div>
+            <div class="ai-tool-btn" onclick="aiAction('unread-summary')" data-phase54="summarize-unread"><div class="at-icon"><i class="fas fa-inbox"></i></div>Summarize unread messages</div>
+            <div class="ai-tool-btn" onclick="aiAction('find-important')"><div class="at-icon"><i class="fas fa-search"></i></div>Find Important</div>
+            <div class="ai-tool-btn" onclick="aiAction('suggest-reply')"><div class="at-icon"><i class="fas fa-comment-dots"></i></div>Suggest Reply</div>
+            <div class="ai-tool-btn" onclick="aiAction('translate')"><div class="at-icon"><i class="fas fa-language"></i></div>Translate</div>
         </div>
         <div style="font-size:11px;color:var(--chain-muted);margin-top:4px;">Auto-reply templates</div>
         <div class="auto-reply-grid">
@@ -586,9 +617,11 @@
     <!-- Phase 53: HD Media Selector (shown before file send) -->
     <div id="hd-selector" class="hd-selector" style="display:none;">
         <span class="file-size-badge" id="file-size-badge"></span>
+        <span class="file-size-badge" id="file-size-estimate" data-phase54="estimated-file-size"></span>
         <button type="button" class="hd-opt active" data-quality="standard" onclick="selectHDQuality('standard')">Standard</button>
         <button type="button" class="hd-opt" data-quality="hd" onclick="selectHDQuality('hd')">HD</button>
         <button type="button" class="hd-opt" data-quality="original" onclick="selectHDQuality('original')">Original</button>
+        <span class="file-size-warning" id="file-size-warning" style="display:none;">Warn above 50MB</span>
         <button type="button" class="hd-opt" onclick="cancelHD();toggleMediaPanel()" style="color:var(--chain-muted);">Cancel</button>
     </div>
 
@@ -691,6 +724,8 @@
         <a class="dropdown-item p-3 d-flex align-items-center" href="#" onclick="copyMessage()" style="gap:8px;"><i class="far fa-copy mr-3 text-muted" style="width:18px;"></i> Copy</a>
         <a class="dropdown-item p-3 d-flex align-items-center" href="#" onclick="initReply()" style="gap:8px;"><i class="fas fa-reply mr-3 text-muted" style="width:18px;"></i> Reply</a>
         <a class="dropdown-item p-3 d-flex align-items-center" href="#" onclick="initForward()" style="gap:8px;"><i class="fas fa-share mr-3 text-muted" style="width:18px;"></i> Forward</a>
+        <a class="dropdown-item p-3 d-flex align-items-center" href="#" onclick="quoteSelectedMessage()" style="gap:8px;"><i class="fas fa-quote-left mr-3 text-muted" style="width:18px;"></i> Quote selected message</a>
+        <a class="dropdown-item p-3 d-flex align-items-center" href="#" onclick="copySelectedQuote()" style="gap:8px;"><i class="far fa-copy mr-3 text-muted" style="width:18px;"></i> Copy selected message quote</a>
         <a class="dropdown-item p-3 d-flex align-items-center" href="#" onclick="initPin()" style="gap:8px;"><i class="fas fa-thumbtack mr-3 text-muted" style="width:18px;"></i> Pin Message</a>
         <a class="dropdown-item p-3 d-flex align-items-center" href="#" onclick="saveDraftNow()" style="gap:8px;"><i class="fas fa-pen mr-3 text-muted" style="width:18px;"></i> Save Draft</a>
         <div class="dropdown-divider"></div>
@@ -815,8 +850,16 @@
         <div id="network-warning" style="display:none;color:#ffcc00;font-size:12px;margin-top:6px;">
             <i class="fas fa-exclamation-triangle"></i> Poor connection...
         </div>
+        <div id="phase54-network-quality" class="phase54-network-quality" data-phase54-call="network-quality">Good</div>
         <!-- Phase 41: Quality Monitor -->
         <div id="call-quality-status" style="display:none;font-size:11px;margin-top:2px;color:#9ca3af;"></div>
+    </div>
+    <div id="phase54-mini-call" class="phase54-mini-call" data-phase54-call="picture-in-picture" style="display:none;">
+        <div>
+            <strong>{{ thread.display_name }}</strong>
+            <span id="phase54-mini-call-status">Connected</span>
+        </div>
+        <button type="button" onclick="toggleCallPiP()" aria-label="Restore call"><i class="fas fa-up-right-and-down-left-from-center"></i></button>
     </div>
     <!-- Phase 41: ICE Connection State Display -->
     <div id="call-connection-state" style="position:absolute;top:60px;left:16px;font-size:10px;color:rgba(255,255,255,0.4);z-index:10;display:none;"></div>
@@ -831,6 +874,7 @@
         <button class="co-mute" onclick="toggleMute()"><i class="fas fa-microphone"></i></button>
         <button class="co-vid" onclick="toggleCamera()"><i class="fas fa-video"></i></button>
         <button class="co-speaker" onclick="toggleSpeaker()"><i class="fas fa-volume-up"></i></button>
+        <button class="co-pip" onclick="toggleCallPiP()" title="Picture-in-picture"><i class="fas fa-down-left-and-up-right-to-center"></i></button>
         <button class="co-end end-call" onclick="endCurrentCall()"><i class="fas fa-phone-slash"></i></button>
         <button id="answer-btn" style="display:none;width:56px;height:56px;border-radius:50%;border:none;background:#22c55e;color:#fff;font-size:22px;cursor:pointer;" onclick="answerIncomingCall()"><i class="fas fa-phone"></i></button>
     </div>
@@ -874,6 +918,7 @@
 <script src="{{ url_for('static', filename='js/webrtc_calls.js') }}"></script>
 <script src="{{ url_for('static', filename='js/group_calls.js') }}"></script>
 <script src="{{ url_for('static', filename='js/message_composer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/message_premium_features.js') }}"></script>
 <script>
     const threadId = "{{ thread.id }}";
     const myId = "{{ profile.id }}";
@@ -889,6 +934,20 @@
         if (window.wCallInit) wCallInit(socket);
     });
     const currentTargetProfileId = "{{ thread.other_member.id if thread.other_member else '' }}";
+    try {
+        if (typeof window.initPremiumFeatures === 'function') {
+            window.initPremiumFeatures({
+                threadId: threadId,
+                socket: socket,
+                sendMessage: function(body) {
+                    var inp = document.getElementById('msg-input');
+                    if (inp) inp.value = body || '';
+                    if (typeof sendMessage === 'function') sendMessage(body || '', null, null);
+                },
+                currentTargetProfileId: currentTargetProfileId || ''
+            });
+        }
+    } catch(e) { if (console) console.warn('Premium features init:', e); }
     window.currentTargetProfileId = currentTargetProfileId;
     window.currentThreadId = threadId;
     let pollTimer = null;
@@ -1200,412 +1259,14 @@
         }
     });
 
-    // =========== PHASE 53 — PREMIUM MESSAGING ===========
-
-    // --- Plus Menu ---
-    let _plusMenuOpen = false;
-    function togglePlusMenu() {
-        const menu = document.getElementById('plus-menu');
-        const panels = ['poll-creator','schedule-picker','wallet-actions','ai-tools-panel','emoji-panel','sticker-panel','gif-panel'];
-        panels.forEach(id => {
-            const el = document.getElementById(id);
-            if (el && el !== menu) el.style.display = 'none';
-        });
-        _plusMenuOpen = menu.style.display !== 'block';
-        menu.style.display = _plusMenuOpen ? 'block' : 'none';
-    }
-    document.addEventListener('click', (e) => {
-        if (_plusMenuOpen && !e.target.closest('#plus-menu') && !e.target.closest('.composer-btn[onclick*="togglePlusMenu"]')) {
-            document.getElementById('plus-menu').style.display = 'none';
-            _plusMenuOpen = false;
-        }
-    });
-
-    // --- Poll ---
-    let pollOptCount = 0;
-    function showPollCreator() {
-        const p = document.getElementById('poll-creator');
-        p.style.display = 'block';
-        if (pollOptCount === 0) { addPollOption(); addPollOption(); }
-    }
-    function hidePollCreator() { document.getElementById('poll-creator').style.display = 'none'; }
-    function addPollOption() {
-        if (pollOptCount >= 6) return;
-        pollOptCount++;
-        const div = document.createElement('div');
-        div.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center;';
-        div.innerHTML = `<input type="text" class="poll-opt-input" placeholder="Option ${pollOptCount}..." style="flex:1;padding:8px;border:1px solid var(--chain-border);border-radius:8px;background:var(--chain-bg-soft);color:var(--chain-text);font-size:13px;"><i class="fas fa-times" style="cursor:pointer;color:var(--chain-muted);font-size:12px;" onclick="this.parentElement.remove();pollOptCount--;"></i>`;
-        document.getElementById('poll-options-list').appendChild(div);
-    }
-    function sendPoll() {
-        const question = document.getElementById('poll-question').value.trim();
-        const opts = [...document.querySelectorAll('.poll-opt-input')].map(i => i.value.trim()).filter(Boolean);
-        if (!question || opts.length < 2) { alert('Question and at least 2 options required'); return; }
-        fetch('/messages/api/poll/create', {
-            method:'POST', credentials:'same-origin',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({thread_id:threadId, question, options:opts, allow_multiple:!document.getElementById('poll-allow-multiple').checked})
-        }).then(r=>r.json()).then(d=>{
-            if(d.ok) {
-                hidePollCreator();
-                document.getElementById('poll-question').value = '';
-                document.getElementById('poll-options-list').innerHTML = '';
-                pollOptCount = 0;
-                if (d.poll) appendPollMessage(d.poll);
-            } else alert(d.error || 'Failed to create poll');
-        }).catch(()=>alert('Failed to create poll'));
-    }
-    function appendPollMessage(poll) {
-        const div = document.createElement('div'); div.className = 'msg-group';
-        div.innerHTML = `<div class="msg-bubble-container msg-mine-container"><div class="msg-bubble msg-mine"><div class="poll-card"><div class="poll-question">${poll.question}</div>${(poll.options||[]).map(o=>`<div class="poll-option" data-opt-id="${o.id}" onclick="votePoll('${poll.id}','${o.id}')"><span class="poll-option-text">${o.option_text}</span></div>`).join('')}<div class="poll-footer"><span>${(poll.options||[]).length} options</span></div></div></div></div>`;
-        document.getElementById('message-list').appendChild(div);
-        document.getElementById('message-list').scrollTop = document.getElementById('message-list').scrollHeight;
-    }
-    function votePoll(pollId, optionId) {
-        fetch('/messages/api/poll/'+pollId+'/vote', {
-            method:'POST', credentials:'same-origin',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({option_id:optionId})
-        }).then(r=>r.json()).then(d=>{
-            if(d.ok) { fetchPollResults(pollId); }
-        }).catch(()=>{});
-    }
-    function fetchPollResults(pollId) {
-        fetch('/messages/api/poll/'+pollId+'/results', {credentials:'same-origin'})
-        .then(r=>r.json()).then(d=>{
-            if(d.ok && d.options) {
-                const total = d.options.reduce((s,o)=>s+(o.vote_count||0),0);
-                document.querySelectorAll(`.poll-option[data-opt-id]`).forEach(el => {
-                    const opt = d.options.find(o=>o.id===el.dataset.optId);
-                    if(opt) {
-                        const pct = total > 0 ? Math.round((opt.vote_count||0)/total*100) : 0;
-                        el.innerHTML = `<span class="poll-option-bar" style="width:${pct}%"></span><span class="poll-option-text">${opt.option_text}</span><span class="poll-option-pct">${pct}%</span><span class="poll-option-count">${opt.vote_count||0} votes</span>`;
-                        el.classList.add('voted');
-                    }
-                });
-            }
-        }).catch(()=>{});
-    }
-
-    // --- Schedule Message ---
-    function showSchedulePicker() { document.getElementById('schedule-picker').style.display = 'block'; }
-    function hideSchedulePicker() { document.getElementById('schedule-picker').style.display = 'none'; }
-    function scheduleMessage(when) {
-        let scheduledFor;
-        const now = new Date();
-        if (when === 'later_today') {
-            scheduledFor = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0);
-        } else if (when === 'tomorrow') {
-            scheduledFor = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0, 0);
-        } else {
-            scheduledFor = new Date(document.getElementById('custom-schedule-time').value);
-        }
-        if (!scheduledFor || scheduledFor <= now) { alert('Please pick a future time'); return; }
-        const body = document.getElementById('msg-input').value.trim();
-        if (!body) { alert('Type a message first'); return; }
-        fetch('/messages/api/threads/'+threadId+'/schedule', {
-            method:'POST', credentials:'same-origin',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({body, scheduled_for: scheduledFor.toISOString()})
-        }).then(r=>r.json()).then(d=>{
-            if(d.ok || d.success) {
-                document.getElementById('msg-input').value = '';
-                document.getElementById('send-btn').disabled = true;
-                hideSchedulePicker();
-                alert('Message scheduled!');
-            } else alert(d.error || 'Failed to schedule');
-        }).catch(()=>alert('Failed to schedule'));
-    }
-
-    // --- Disappearing Messages ---
-    function showDTimerMenu() { document.getElementById('d-timer-menu').style.display = 'block'; }
-    function hideDTimerMenu() { document.getElementById('d-timer-menu').style.display = 'none'; }
-    function setDisappearingTimer(seconds) {
-        fetch('/messages/api/thread/'+threadId+'/disappearing', {
-            method:'POST', credentials:'same-origin',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({timer_seconds: seconds})
-        }).then(r=>r.json()).then(d=>{
-            if(d.ok) {
-                hideDTimerMenu();
-                const btn = document.getElementById('d-timer-btn');
-                if (seconds > 0) {
-                    const labels = {86400:'24h',604800:'7d',2592000:'30d'};
-                    btn.innerHTML = '<i class="fas fa-hourglass-half" style="color:#f59e0b;"></i>';
-                    btn.title = 'Disappearing: ' + (labels[seconds]||seconds+'s');
-                } else {
-                    btn.innerHTML = '<i class="fas fa-hourglass-half"></i>';
-                    btn.title = 'Disappearing messages';
-                }
-            }
-        }).catch(()=>{});
-    }
-
-    // --- Thread Search ---
-    let _searchResults = [];
-    let _searchIdx = -1;
-    let _searchQuery = '';
-    function toggleSearch() {
-        const bar = document.getElementById('thread-search-bar');
-        bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
-        if (bar.style.display === 'flex') document.getElementById('thread-search-input').focus();
-    }
-    function closeSearch() {
-        document.getElementById('thread-search-bar').style.display = 'none';
-        clearHighlights();
-    }
-    function clearHighlights() {
-        document.querySelectorAll('.search-highlight').forEach(el => {
-            const parent = el.parentNode;
-            parent.replaceChild(document.createTextNode(el.textContent), el);
-            parent.normalize();
-        });
-        document.querySelectorAll('.thread-search-result').forEach(el => el.remove());
-        document.getElementById('search-count').textContent = '';
-    }
-    function debounceSearch() {
-        clearTimeout(window._searchTimer);
-        window._searchTimer = setTimeout(doSearch, 300);
-    }
-    function doSearch() {
-        const q = document.getElementById('thread-search-input').value.trim();
-        if (q.length < 2) { clearHighlights(); return; }
-        _searchQuery = q;
-        // Local search first
-        const messages = document.querySelectorAll('.msg-text');
-        _searchResults = [];
-        clearHighlights();
-        messages.forEach(el => {
-            const text = el.textContent;
-            const idx = text.toLowerCase().indexOf(q.toLowerCase());
-            if (idx >= 0) {
-                const group = el.closest('.msg-group');
-                if (group) _searchResults.push(group.id);
-                // Highlight
-                const regex = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-                el.innerHTML = text.replace(regex, '<span class="search-highlight">$1</span>');
-            }
-        });
-        // Try backend search too
-        fetch('/messages/api/thread/'+threadId+'/search?q='+encodeURIComponent(q), {credentials:'same-origin'})
-        .then(r=>r.json()).then(d=>{}).catch(()=>{});
-        _searchIdx = _searchResults.length > 0 ? 0 : -1;
-        updateSearchNav();
-    }
-    function searchNext() {
-        if (_searchResults.length === 0) return;
-        _searchIdx = (_searchIdx + 1) % _searchResults.length;
-        scrollToSearchResult();
-    }
-    function searchPrev() {
-        if (_searchResults.length === 0) return;
-        _searchIdx = (_searchIdx - 1 + _searchResults.length) % _searchResults.length;
-        scrollToSearchResult();
-    }
-    function scrollToSearchResult() {
-        const id = _searchResults[_searchIdx];
-        const el = document.getElementById(id);
-        if (el) {
-            el.scrollIntoView({behavior:'smooth', block:'center'});
-            el.style.background = 'rgba(124,58,237,0.1)';
-            setTimeout(() => el.style.background = '', 1500);
-        }
-        updateSearchNav();
-    }
-    function updateSearchNav() {
-        const count = document.getElementById('search-count');
-        count.textContent = _searchResults.length > 0 ? `${_searchIdx+1}/${_searchResults.length}` : '0/0';
-    }
-
-    // --- HD Media ---
-    let _selectedHDQuality = 'standard';
-    function selectHDQuality(q) {
-        _selectedHDQuality = q;
-        document.querySelectorAll('.hd-opt[data-quality]').forEach(el => el.classList.toggle('active', el.dataset.quality === q));
-    }
-    function cancelHD() { document.getElementById('hd-selector').style.display = 'none'; }
-
-    // --- Voice Transcription ---
-    function transcribeVoice(msgId) {
-        const el = document.getElementById('transcript-'+msgId);
-        if (el && el.style.display !== 'none' && el.textContent) {
-            el.style.display = 'none';
-            return;
-        }
-        fetch('/messages/api/messages/'+msgId+'/transcribe', {
-            method:'POST', credentials:'same-origin'
-        }).then(r=>r.json()).then(d=>{
-            if (d.transcript) {
-                el.textContent = d.transcript;
-                el.style.display = 'block';
-                if (d.note) el.textContent += ' ('+d.note.replace(/_/g,' ')+')';
-            } else {
-                el.textContent = 'Transcription not available yet';
-                el.style.display = 'block';
-            }
-        }).catch(()=>{
-            if (el) { el.textContent = 'Transcription not available yet'; el.style.display = 'block'; }
-        });
-    }
-
-    // --- Wallet ---
-    let _walletTransferType = '';
-    function showWalletActions() { document.getElementById('wallet-actions').style.display = 'block'; }
-    function hideWalletActions() { document.getElementById('wallet-actions').style.display = 'none'; }
-    function walletTransfer(type) {
-        _walletTransferType = type;
-        const labels = {send:'Send Money',request:'Request Money',tip:'Tip User',split:'Split Bill'};
-        const amount = prompt(labels[type]+':\nEnter amount (CHAIN coins):');
-        if (!amount || isNaN(amount) || Number(amount) <= 0) return;
-        const note = prompt('Optional note:') || '';
-        const endpoint = '/messages/api/wallet/' + type;
-        fetch(endpoint, {
-            method:'POST', credentials:'same-origin',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-                thread_id: threadId,
-                amount: Number(amount),
-                note: note,
-                recipient_profile_id: currentTargetProfileId || ''
-            })
-        }).then(r=>r.json()).then(d=>{
-            const el = document.getElementById('wallet-response');
-            if (d.ok === false && d.error) {
-                el.textContent = d.error;
-            } else {
-                el.textContent = 'Request sent!';
-            }
-            setTimeout(() => { if (el) el.textContent = ''; }, 5000);
-        }).catch(()=>{
-            document.getElementById('wallet-response').textContent = 'Wallet transfer route not available yet.';
-        });
-    }
-
-    // --- AI Tools ---
-    function showAITools() { document.getElementById('ai-tools-panel').style.display = 'block'; }
-    function hideAITools() { document.getElementById('ai-tools-panel').style.display = 'none'; }
-    function aiAction(mode) {
-        const respEl = document.getElementById('ai-tools-response');
-        const endpoints = {
-            summarize: '/messages/api/chat/ai/summarize',
-            'find-important': '/messages/api/chat/ai/find-important',
-            'suggest-reply': '/messages/api/chat/ai/suggest-reply',
-            translate: '/messages/api/chat/ai/translate'
-        };
-        const endpoint = endpoints[mode];
-        if (!endpoint) return;
-        respEl.textContent = 'Processing...';
-        fetch(endpoint, {
-            method:'POST', credentials:'same-origin',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({thread_id: threadId, context: document.getElementById('msg-input').value})
-        }).then(r=>r.json()).then(d=>{
-            if (mode === 'summarize' && d.summary) {
-                if (confirm('AI Summary:\n\n' + d.summary + '\n\nSend to chat?')) {
-                    sendMessage(d.summary, null, null);
-                }
-                respEl.textContent = '';
-            } else if (mode === 'suggest-reply' && d.suggestions && d.suggestions.length > 0) {
-                const reply = d.suggestions[0];
-                if (confirm('Suggested reply:\n\n' + reply + '\n\nSend?')) {
-                    sendMessage(reply, null, null);
-                }
-                respEl.textContent = '';
-            } else if (mode === 'translate') {
-                if (d.translated_text && confirm('Translation:\n\n' + d.translated_text + '\n\nSend?')) {
-                    sendMessage(d.translated_text, null, null);
-                }
-                respEl.textContent = '';
-            } else {
-                respEl.textContent = d.note ? d.note.replace(/_/g,' ') : (d.summary || 'Done');
-                setTimeout(() => { if (respEl) respEl.textContent = ''; }, 4000);
-            }
-        }).catch(() => {
-            respEl.textContent = 'AI route not available yet.';
-            setTimeout(() => { if (respEl) respEl.textContent = ''; }, 4000);
-        });
-    }
-    function useAutoReply(template) {
-        if (confirm('Send: "' + template + '"\n\nUse this auto-reply?')) {
-            sendMessage(template, null, null);
-        }
-    }
-
-    // --- Open Camera ---
-    function openCamera() {
-        const input = document.getElementById('file-input');
-        input.accept = 'image/*';
-        input.capture = 'environment';
-        input.click();
-        input.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt';
-    }
-
-    // --- Socket Event Handlers for Phase 53 ---
-    socket.on('poll:new', (data) => {
-        if (data.poll && data.poll.thread_id === threadId) {
-            appendPollMessage(data.poll);
-        }
-    });
-    socket.on('poll:updated', (data) => {
-        if (data.poll && data.options) {
-            fetchPollResults(data.poll.id);
-        }
-    });
-    socket.on('live_location:start', (data) => {
-        if (data.thread_id === threadId || !data.thread_id) {
-            const link = document.createElement('div');
-            link.className = 'live-location-card';
-            link.innerHTML = `<div class="ll-icon"><i class="fas fa-location-dot"></i></div><div class="ll-info"><div>Live Location</div><div class="ll-sub">${data.duration_minutes || 15} min</div></div><a href="https://maps.google.com/?q=${data.lat},${data.lng}" target="_blank" class="ll-stop" style="text-decoration:none;">View</a>`;
-            document.getElementById('message-list').appendChild(link);
-        }
-    });
-    socket.on('live_location:update', (data) => {
-        // Update map link if present
-    });
-    socket.on('live_location:stopped', (data) => {
-        // Location sharing ended
-    });
-    socket.on('disappearing:updated', (data) => {
-        if (data.timer_seconds > 0) {
-            const labels = {86400:'24h',604800:'7d',2592000:'30d'};
-            document.getElementById('d-timer-btn').innerHTML = '<i class="fas fa-hourglass-half" style="color:#f59e0b;"></i>';
-            document.getElementById('d-timer-btn').title = 'Disappearing: ' + (labels[data.timer_seconds] || data.timer_seconds + 's');
-        } else {
-            document.getElementById('d-timer-btn').innerHTML = '<i class="fas fa-hourglass-half"></i>';
-            document.getElementById('d-timer-btn').title = 'Disappearing messages';
-        }
-    });
-    socket.on('transcribe:result', (data) => {
-        if (data.message_id) {
-            const el = document.getElementById('transcript-'+data.message_id);
-            if (el) { el.textContent = data.transcript || 'Transcription not available yet'; el.style.display = 'block'; }
-        }
-    });
-    socket.on('chat:suggestions', (data) => {
-        if (data.suggestions && data.suggestions.length > 0) {
-            const reply = data.suggestions[0];
-            if (confirm('Suggested reply:\n\n' + reply + '\n\nSend?')) {
-                sendMessage(reply, null, null);
-            }
-        }
-    });
-    socket.on('chat:summary', (data) => {
-        if (data.summary && confirm('AI Summary:\n\n' + data.summary + '\n\nSend to chat?')) {
-            sendMessage(data.summary, null, null);
-        }
-    });
-
-    // --- Keyboard shortcut for search ---
-    document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'f' && document.activeElement?.closest('.chat-container')) {
-            e.preventDefault();
-            toggleSearch();
-        }
-    });
+    // =========== PHASE 53 — PREMIUM MESSAGING (loaded from message_premium_features.js) ===========
+    // Premium features initialized below after DOM ready.
 
     function startHeartbeat() {
         setInterval(() => {
-            socket.emit('presence:heartbeat', {});
+            if (socket && socket.connected !== false) {
+                try { socket.emit('presence:heartbeat', {}); } catch(e) {}
+            }
         }, 30000);
     }
 
@@ -2098,6 +1759,13 @@
     function shareAsStory() {
         if (!selectedMsgText && !selectedMsgId) return;
         const text = selectedMsgText || 'Message';
+        if (selectedMsgId) {
+            fetch('/messages/api/messages/' + selectedMsgId + '/share/story', {
+                method:'POST', credentials:'same-origin',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({thread_id: threadId})
+            }).catch(()=>{});
+        }
         const url = window.location.origin + '/stories/create?text=' + encodeURIComponent(text);
         fetch(url, {method:'HEAD', credentials:'same-origin'}).then(r => {
             if (r.ok) window.location.href = url;
@@ -2109,6 +1777,13 @@
     function shareAsPost() {
         if (!selectedMsgText && !selectedMsgId) return;
         const text = selectedMsgText || 'Message';
+        if (selectedMsgId) {
+            fetch('/messages/api/messages/' + selectedMsgId + '/share/post', {
+                method:'POST', credentials:'same-origin',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({thread_id: threadId})
+            }).catch(()=>{});
+        }
         const url = window.location.origin + '/feed/create?text=' + encodeURIComponent(text);
         fetch(url, {method:'HEAD', credentials:'same-origin'}).then(r => {
             if (r.ok) window.location.href = url;
@@ -2123,6 +1798,27 @@
         }).catch(() => {
             prompt('Copy this message:', text);
         });
+    }
+
+    function shareContentIntoChat(kind, contentId, label) {
+        const text = (label || kind || 'Shared item') + (contentId ? ' ' + contentId : '');
+        sendMessage(text, null, null);
+    }
+
+    function quoteSelectedMessage() {
+        if (!selectedMsgId) return;
+        document.getElementById('parent_message_id').value = selectedMsgId;
+        document.getElementById('reply-preview').style.display = 'flex';
+        document.getElementById('reply-text').textContent = selectedMsgText || 'Quoted message';
+        document.getElementById('msg-context-menu').style.display = 'none';
+    }
+
+    function copySelectedQuote() {
+        const text = selectedMsgText ? '> ' + selectedMsgText : '';
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            document.getElementById('msg-context-menu').style.display = 'none';
+        }).catch(() => prompt('Copy quote:', text));
     }
 
     // ---- Message Info ----
@@ -2181,6 +1877,9 @@
     window.callHistoryAction = callHistoryAction;
     window.shareAsStory = shareAsStory;
     window.shareAsPost = shareAsPost;
+    window.shareContentIntoChat = shareContentIntoChat;
+    window.quoteSelectedMessage = quoteSelectedMessage;
+    window.copySelectedQuote = copySelectedQuote;
     window.showMessageInfo = showMessageInfo;
     window.closeMessageInfo = closeMessageInfo;
     window.copyMessageId = copyMessageId;
